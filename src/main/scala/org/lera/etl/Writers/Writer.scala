@@ -1,7 +1,8 @@
 package org.lera.etl.Writers
 
-import scala.collection.parallel.immutable.ParSeq
 import org.apache.spark.sql.DataFrame
+
+import scala.collection.parallel.immutable.ParSeq
 
 /*
  * Writer for persisting dataset into target system

@@ -8,15 +8,15 @@ object Enums {
    * Flat file : File based reader
    * */
 
-  object Readers extends Enumeration{
+  object Readers extends Enumeration {
 
     type readerType = Value
     val KUDU, EXCEL, CSV, JSON, TEXT, SQLKUDU, HIVE, RESTAPI = Value
 
-    def apply(readerType : String) : Option[Value] =
+    def apply(readerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(readerType))
 
-    def fromString(readerType : String) : Option[Value] =
+    def fromString(readerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(readerType))
   }
 
@@ -24,18 +24,18 @@ object Enums {
    * Transformer enum for creating instance of Transformer implementation
    * */
 
-  object Transformers extends Enumeration{
+  object Transformers extends Enumeration {
 
     type transformerType = Value
 
-   /*
-    * To be continued later based on the source systems
-    * val towWorksContracts, ..... */
+    /*
+     * To be continued later based on the source systems
+     * val towWorksContracts, ..... */
 
-    def apply(transformerType : String) : Option[Value] =
+    def apply(transformerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(transformerType))
 
-    def fromString(transformerType : String) : Option[Value] =
+    def fromString(transformerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(transformerType))
 
   }
@@ -44,17 +44,16 @@ object Enums {
    * Writers enum for creating instance of writer implementation
    * */
 
-  object Writers extends Enumeration{
+  object Writers extends Enumeration {
 
     type writerType = Value
     val KUDU, HIVE, EXCEL = Value
 
-    def apply(writerType : String) : Option[Value] =
+    def apply(writerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(writerType))
 
-    def fromString(writerType : String) : Option[Value] =
+    def fromString(writerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(writerType))
-
 
   }
 
@@ -67,10 +66,10 @@ object Enums {
     type RunStatus = Value
     val RUNNING, SUCCESS, FAILED = Value
 
-    def apply(status : String) : Option[Value] =
+    def apply(status: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(status))
 
-    def fromString(runStatus : String) : Option[Value] =
+    def fromString(runStatus: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(runStatus))
 
   }
@@ -84,10 +83,10 @@ object Enums {
     type loadType = Value
     val INCREMENTAL, INCR, FULL = Value
 
-    def apply(loadType : String) : Option[Value] =
+    def apply(loadType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(loadType))
 
-    def fromString(loadType : String) : Option[Value] =
+    def fromString(loadType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(loadType))
 
   }

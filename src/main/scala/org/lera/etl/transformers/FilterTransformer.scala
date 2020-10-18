@@ -1,9 +1,10 @@
 package org.lera.etl.transformers
 
-import scala.collection.parallel.immutable.ParSeq
-import org.apache.spark.sql.DataFrame
 import org.apache.log4j.Logger
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataType
+
+import scala.collection.parallel.immutable.ParSeq
 
 object FilterTransformer extends FilterBaseTransformer{
   

@@ -1,10 +1,10 @@
 package org.lera.etl.transformers
 
-import SourceCode._
 import org.apache.log4j.Logger
-import scala.collection.parallel.immutable.ParSeq
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataType
+
+import scala.collection.parallel.immutable.ParSeq
 
 /*
  * DefaultValueSetTransformer adds default values for target tables

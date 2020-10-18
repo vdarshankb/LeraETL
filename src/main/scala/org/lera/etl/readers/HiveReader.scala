@@ -1,8 +1,8 @@
 package org.lera.etl.readers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
 object HiveReader extends Reader{
   
@@ -53,7 +53,6 @@ object HiveReader extends Reader{
       incDF.filter(_.getAs(0) != null).collect()
       
     if(maxValueArr.isEmpty){
-      import org.apache.ibp.utils.Constants.StringExpr
       
       
       StringExpr.empty

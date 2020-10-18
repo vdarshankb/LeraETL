@@ -1,6 +1,10 @@
 package org.lera.etl.util
 
-object KuduUtils {
+import org.lera.{ContextCreator, PartitionTableConfig, TableConfig}
+import org.lera.etl.util.Constants.StringExpr
+import org.lera.etl.ibpAuditDatabase
+import Constants._
+object KuduUtils extends ContextCreator{
 
   import org.apache.log4j.Logger
   import org.apache.spark.sql.DataFrame
@@ -8,13 +12,11 @@ object KuduUtils {
   import scala.collection.parallel.immutable.ParMap
   import scala.util.Try
 
-  val dataFrameCache : ParMap[String, DataFrame] = ParMap.empty[String, DataFrame]
-
   lazy val defaultNoOfPartitions : Int = getConf
     .getOption(key = "spark.kudu_default_partitions")
-    .getNonEmptyOrElse(200.toString)
+    .getOrElse(200.toString)
     .toInt
-
+  val dataFrameCache : ParMap[String, DataFrame] = ParMap.empty[String, DataFrame]
   private val logger : Logger = Logger.getLogger(this.getClass)
 
   /*
@@ -123,24 +125,6 @@ object KuduUtils {
    * @return
    * */
 
-  def readKuduTableWithColumns(tableName : String,
-                               selectColumns : String = "",
-                               where : String = ""): DataFrame = {
-    val columns   = if(selectColumns.isEmpty) "*" else selectColumns
-    val whereCond = if(where.isEmpty) "" else s"WHERE $where"
-    val query =
-      s"(SELECT $columns FROM $tableName $whereCond)${tableName.split(regex = "\\.")(1)}"
-    readKuduTable(query)
-  }
-
-  /*Read Kudu table data with partition information
-   *
-   * @param query select query
-   * @param partitionConfig partition config
-   *
-   * @return
-   *  */
-
   def readKuduWithPartition(
     query : String,
     partitionConfig : PartitionTableConfig
@@ -157,6 +141,17 @@ object KuduUtils {
 
   }
 
+  /*Read Kudu table data with partition information
+   *
+   * @param query select query
+   * @param partitionConfig partition config
+   *
+   * @return
+   *  */
+
+  def readKuduWithCondition(tableName : String, where : Any) : DataFrame =
+    readKuduTableWithColumns(tableName, StringExpr.empty, where.toString)
+
   /*
    * Read Kudu table using conditions
    *
@@ -165,8 +160,15 @@ object KuduUtils {
    * @return
    * */
 
-  def readKuduWithCondition(tableName : String, where : Any) : DataFrame =
-    readKuduTableWithColumns(tableName, StringExpr.empty, where.toString)
+  def readKuduTableWithColumns(tableName : String,
+                               selectColumns : String = "",
+                               where : String = ""): DataFrame = {
+    val columns   = if(selectColumns.isEmpty) "*" else selectColumns
+    val whereCond = if(where.isEmpty) "" else s"WHERE $where"
+    val query =
+      s"(SELECT $columns FROM $tableName $whereCond)${tableName.split(regex = "\\.")(1)}"
+    readKuduTable(query)
+  }
 
   def readKuduTableWithQuery(sourceSystem : String,
                              query : String,
