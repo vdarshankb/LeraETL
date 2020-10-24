@@ -1,7 +1,7 @@
 package org.lera.etl.transformers
 
-import org.apache.spark.sql.DataFrame
-
+import org.apache.spark.sql.{Column, DataFrame}
+import org.apache.spark.sql.functions._
 trait JoinBaseTransformer extends BaseTransformer {
 
   val getDropColumns: DataFrame => DataFrame => Seq[Column] = sourceDf =>
@@ -19,7 +19,7 @@ trait JoinBaseTransformer extends BaseTransformer {
         (df, column) =>
           df.withColumn(
             column,
-            when(col(column).trim.toLower <=> "null", value = null)
+            when(col(column).trim.lower <=> "null", value = null)
               .otherwise(col(column))
         )
       )

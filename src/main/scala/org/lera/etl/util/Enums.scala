@@ -31,7 +31,7 @@ object Enums {
     /*
      * To be continued later based on the source systems
      * val towWorksContracts, ..... */
-
+    val TypeCast, DefaultValue, ColumnMap, Joiner, Filter, Delete = Value
     def apply(transformerType: String): Option[Value] =
       values.find(value => value.toString.equalsIgnoreCase(transformerType))
 

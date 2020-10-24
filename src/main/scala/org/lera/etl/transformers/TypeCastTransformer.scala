@@ -3,9 +3,12 @@ package org.lera.etl.transformers
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.{StructField, StructType}
+import org.lera.TableConfig
+import org.lera.etl.util.Constants._
+import scala.collection.parallel.ParSeq
 
-import scala.collection.parallel.immutable.ParSeq
-
+import org.lera.etl.util.utils._
+import org.apache.spark.sql.functions._
 object TypeCastTransformer extends BaseTransformer {
 
   private val logger: Logger = Logger.getLogger(TypeCastTransformer.getClass)
@@ -65,7 +68,7 @@ object TypeCastTransformer extends BaseTransformer {
       logger.info(
         s"Source column names are ${sourceTableColumns.mkString(StringExpr.comma)}"
       )
-      throw new IBPException(
+      throw new Exception(
         s"Missing target column names in source dataset : ${missingColumns
           .mkString(StringExpr.comma)}"
       )

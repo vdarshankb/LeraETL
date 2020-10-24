@@ -1,6 +1,14 @@
 package org.lera.etl.readers
 
+import java.io.FileNotFoundException
+
 import org.apache.log4j.Logger
+import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}
+import org.apache.spark.sql.types.{DataType, IntegerType, LongType, TimestampType}
+import org.lera.TableConfig
+import org.lera.etl.util.Constants
+import org.lera.etl.util.Constants.StringExpr
 object SQLKuduReader extends Reader{
   
   private val logger : Logger = Logger.getLogger(SQLKuduReader.getClass)
@@ -13,7 +21,7 @@ object SQLKuduReader extends Reader{
       )
       
     override def quoteIdentifier(colName : String) : String = {
-        s"$colName"
+        s""
       }
     }
     
@@ -51,6 +59,7 @@ object SQLKuduReader extends Reader{
           val sourceIncrementalColumn = tableConf.source_increment_column
           
           val maxTargetCond : String = s"max($targetIncrementalColumn)"
+          import org.lera.etl.util.Enums.Writers._
           val maxValueArr : DataFrame = getTargetType(tableConf.target_table_type) match {
             
             case HIVE =>

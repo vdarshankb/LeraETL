@@ -5,16 +5,21 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.lera.TableConfig
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Column, DataFrame}
+import org.lera.etl.util.Constants
+import org.lera.etl.util.Constants.{StringExpr, _}
+import org.lera.etl.util.Enums.Writers._
+import org.lera.etl.util.KuduUtils._
+import org.lera.etl.util.Parser._
+import org.lera.etl.util.utils._
+import org.lera.{ContextCreator, DateTimeConvert, TableConfig}
 
-import scala.collection.parallel.immutable.ParSeq
+import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
-
-trait BaseTransformer {
+trait BaseTransformer extends ContextCreator{
   
   val fiscalYearUDF : UserDefinedFunction = udf(
     (value : String, sourceFormat : String) => {
@@ -111,7 +116,7 @@ trait BaseTransformer {
   val timeConversionUDf : UserDefinedFunction = udf(
         (value : Int, from : String, to_ : String) => {
           val inTime = Duration(value, from)
-          import  TimeUnit._
+          import TimeUnit._
           TimeUnit.valueOf(to_) match {
 
             case DAYS => inTime.toDays
@@ -170,7 +175,7 @@ trait BaseTransformer {
     implicit class BaseImplicits(df : DataFrame) {
       
       def emptyValidator(columns : String*) : DataFrame = {
-        columns.foldLeft(df)((df,columns) => {
+        columns.foldLeft(df)((df,column) => {
           df.withColumn(
            column,
            when(trim(col(column)) === StringExpr.empty , value = null)
@@ -180,7 +185,7 @@ trait BaseTransformer {
       }
       
       def zeroAndEmptyValidator(columns : String*) : DataFrame = {
-          columns.foldLeft(df)((df,columns) => {
+          columns.foldLeft(df)((df,column) => {
           df.withColumn(
            column,
            when(trim(col(column)) === StringExpr.empty || trim(col(column)) === 0 , value = null)
@@ -193,7 +198,7 @@ trait BaseTransformer {
       def IntToTimeStampConvertor(columns : Seq[String]): DataFrame = {
         
         columns.foldLeft(df)((df,column) => 
-          df.withColumn(column,(col(column) / 1000).cast(TimeStampType))  
+          df.withColumn(column,(col(column) / 1000).cast(TimestampType))
         )
       }
       
@@ -265,8 +270,8 @@ trait BaseTransformer {
               targetColumn,
               timeConversionUDf(
               col(sourceColumn),
-              lit(sourceTime.toString),
-              lit(targetTime.toString)
+              lit(sourceTime),
+              lit(targetTime)
               )
               
             )
@@ -286,17 +291,17 @@ trait BaseTransformer {
     }
     
     implicit class ColumnImplicits(column : Column) {
-      
+
       def lower: Column = {
-        Functions.lower(column)
+        lower(column)
       }
       
       def length: Column = {
-        Functions.length(column)
+        length(column)
       }
       
       def trim: Column = {
-        Functions.trim(column)
+        trim(column)
       }
     }
       val getDefaultTableConfigFunc : String => TableConfig => DataFrame = table =>
@@ -318,7 +323,7 @@ trait BaseTransformer {
    def transform(
          dataFrameSeq : ParSeq[(TableConfig, DataFrame)]
    ) : ParSeq[(TableConfig, DataFrame)]
-      ).toWhereCondition().ignoreCase.InSQL
+
       
     def renameDFColumnNames(dataDF : DataFrame, col_array : Array[(String, String)]) : DataFrame = {
       col_array.foldLeft(dataDF) ((df,tuple) =>
@@ -342,7 +347,7 @@ trait BaseTransformer {
     }
       
     // Check for the return type
-    def configHandler[A <: ParSeq[TableConfig], B>: TableConfig, C](inSeq : A)(block : B => C) : C = {
+    def configHandler[A <: ParSeq[TableConfig], B >: TableConfig, C](inSeq : A)(block : B => C) : C = {
       Try(block(inSeq.head)) match {
       case Success(configDataFrame) => configDataFrame
       case Failure(exception) =>

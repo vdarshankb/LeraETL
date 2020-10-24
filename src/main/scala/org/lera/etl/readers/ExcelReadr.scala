@@ -49,8 +49,7 @@ object ExcelReadr extends Reader with PipelineBase {
     spark.stop()
   }
 
-  override def readData(properties: Properties,
-                        spark: SparkSession): DataFrame = {
+  override def readData(properties: Properties): DataFrame = {
 
     val filePath = properties.getProperty("filepath")
     logger.info(s"Reading data from Excel file $filePath")

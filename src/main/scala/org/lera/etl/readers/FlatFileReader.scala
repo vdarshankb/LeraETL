@@ -82,7 +82,7 @@ object FlatFileReader extends Reader {
      * if(fileLocation.startsWith("file:///") || numOfFiles ==1)*/
 
     spark.read
-      .format(csvFileType.toLowerCase)
+      .format("csv")
       .option("header", true)
       .option("quote", "\"")
       .option("escape", "\"")

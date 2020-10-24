@@ -3,7 +3,9 @@ package org.lera.etl.transformers
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.parallel.immutable.ParSeq
+import org.lera.etl.util.Constants._
+import scala.collection.parallel.ParSeq
+import org.lera.etl.util.utils._
 
 object JoinTransformer extends JoinBaseTransformer {
 

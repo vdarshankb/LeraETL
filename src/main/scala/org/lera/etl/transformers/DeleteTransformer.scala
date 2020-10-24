@@ -2,7 +2,11 @@ package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
-
+import org.lera.TableConfig
+import org.lera.etl.util.Constants._
+import scala.collection.parallel.ParSeq
+import org.lera.etl.util.utils._
+import org.apache.spark.sql.functions._
 object DeleteTransformer extends FilterBaseTransformer {
 
   import org.apache.spark.sql.types.DataType
@@ -21,7 +25,7 @@ object DeleteTransformer extends FilterBaseTransformer {
     case "in"       => "not in"
     case "not in"   => "in"
 
-    case x => throw new IBPException(s"Unknown delete condition $x")
+    case x => throw new Exception(s"Unknown delete condition $x")
   }
 
   private val logger: Logger = Logger.getLogger(DeleteTransformer.getClass)
@@ -125,7 +129,6 @@ object DeleteTransformer extends FilterBaseTransformer {
 
     //   import utils.ContextCreator.getSparkSession
 
-    val spark = getSparkSession
 
     val deleteDataArray: Array[FilterData] = configDataFrame
       .where(whereQuery)

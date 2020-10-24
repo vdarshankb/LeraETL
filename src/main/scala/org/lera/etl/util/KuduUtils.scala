@@ -1,22 +1,23 @@
 package org.lera.etl.util
 
-import org.lera.{ContextCreator, PartitionTableConfig, TableConfig}
 import org.lera.etl.util.Constants.StringExpr
-import org.lera.etl.ibpAuditDatabase
-import Constants._
+import org.lera.etl.util.ImpalaConnector._
+import org.lera.etl.util.utils._
+import org.lera.{ContextCreator, TableConfig}
+
+import scala.util.{Failure, Success}
 object KuduUtils extends ContextCreator{
 
   import org.apache.log4j.Logger
   import org.apache.spark.sql.DataFrame
 
-  import scala.collection.parallel.immutable.ParMap
   import scala.util.Try
 
   lazy val defaultNoOfPartitions : Int = getConf
     .getOption(key = "spark.kudu_default_partitions")
     .getOrElse(200.toString)
     .toInt
-  val dataFrameCache : ParMap[String, DataFrame] = ParMap.empty[String, DataFrame]
+  val dataFrameCache : scala.collection.mutable.Map[String, DataFrame] = scala.collection.mutable.Map.empty[String, DataFrame]
   private val logger : Logger = Logger.getLogger(this.getClass)
 
   /*
@@ -46,22 +47,20 @@ object KuduUtils extends ContextCreator{
         val whereCond : String = if(condition.isEmpty) StringExpr.empty else s"WHERE $condition"
 	      val selectQuery : String = s"SELECT * FROM $tableName $whereCond"
 
-	      val sourceDataFrame =
+	      val sourceDataFrame: DataFrame =
 	        if(isHiveIntermediateRequired)
 	          readKuduUsingHive(selectQuery, tableConf.target_database, tableConf
 	              .source_table)
 	        else {
-	          val partitionData : Array[PartitionTableConfig] = getPartitionTableValues
-	          (tableConf)
+	          val partitionData : Array[PartitionTableConfig] = getPartitionTableValues(tableConf)
 
 	          val kuduSelectQuery : String = s"($selectQuery)temp_table"
 
-	          if(partionData.nonEmpty){
+	          if(partitionData.nonEmpty){
 	            logger
 	            .info("Reading table with Partition details")
-	  //        readKuduWithPartition(kuduSelectQuery,partitionData.head)
+	  //        readKuduWithPartition(kuduSelectQuery,partitionData.head)(condition)
 	            Predicates.readKuduWithPredicates(tableName, tableName, partitionData.head)
-	            (condition)
 	          } else {
 	            readKuduTable(kuduSelectQuery)(defaultNoOfPartitions)
 	          }
@@ -83,10 +82,10 @@ object KuduUtils extends ContextCreator{
   tableConf : TableConfig
   ) : Array[PartitionTableConfig] = {
 
+    import Constants._
     import org.apache.spark.sql.Encoders
-
     val partitionTable : String =
-      s"$ibpConfigDatabase.${getProperty(partitionTableName)}"
+      s"$leraConfigDatabase.${getProperty(partitionTableName)}"
 
     val selectColumns : String = Array(
     sourceSystem,
@@ -104,14 +103,14 @@ object KuduUtils extends ContextCreator{
       Array(
       s"$sourceSystem = '${tableConf.source_system}'",
       s"$sourceDataRegionName = '${tableConf.sourcedata_regionname}'",
-      s"$database_name = '${tableConf.source_database_name}'",
-      s"$tableName = '${tableConf.source_table_name}'"
+      s"$database_name = '${tableConf.source_database}'",
+      s"$tableName = '${tableConf.source_table}'"
       ).mkString(" AND ")
 
     readKuduTableWithColumns(
     partitionTable,
     selectColumns,
-    whereQuery.ignoreCaseInSQL
+    whereQuery
     ).as[PartitionTableConfig](Encoders.product[PartitionTableConfig])
     .collect()
   }
@@ -166,7 +165,7 @@ object KuduUtils extends ContextCreator{
     val columns   = if(selectColumns.isEmpty) "*" else selectColumns
     val whereCond = if(where.isEmpty) "" else s"WHERE $where"
     val query =
-      s"(SELECT $columns FROM $tableName $whereCond)${tableName.split(regex = "\\.")(1)}"
+      s"(SELECT $columns FROM $tableName $whereCond)${tableName.split("\\.")(1)}"
     readKuduTable(query)
   }
 
@@ -179,8 +178,7 @@ object KuduUtils extends ContextCreator{
     query, {
       val isHiveEnabled : Boolean = isHiveIntermediateEnabled(sourceSystem)
 
-      val whereCond : String = if(where.isEmpty) StringExpr.isEmpty else s"WHERE
-	      sourceTable.$where"
+      val whereCond : String = if(where.isEmpty) StringExpr.empty else s"WHERE sourceTable.$where"
 
 	    val selectQuery : String = s"SELECT * FROM ($query)sourceTable $whereCond"
 	    val sourceDataFrame =
@@ -205,7 +203,7 @@ object KuduUtils extends ContextCreator{
 
   def isHiveIntermediateEnabled(sourceSystem : String) : Boolean = {
 
-    val sourceSystems = ContextCreator.getConf
+    val sourceSystems = getConf
       .getOption(key = "spark.read_kudu_using_hive_source_systems")
       .getOrElse(StringExpr.empty)
 
@@ -231,8 +229,7 @@ object KuduUtils extends ContextCreator{
 
     executeQuery(dropStatement)
     val tableCreateStatement : String =
-      s"CREATE TABLE $intermediateTable.STORED AS PARQUET AS SELECT * FROM ($query)tmp
-	    WHERE false"
+      s"CREATE TABLE $intermediateTable.STORED AS PARQUET AS SELECT * FROM ($query)tmp WHERE false"
 	  executeQuery(tableCreateStatement)
 
     val columns : String = readHiveTable(intermediateTable).columns
@@ -243,7 +240,7 @@ object KuduUtils extends ContextCreator{
       s"INSERT INTO TABLE $intermediateTable ($columns) SELECT $columns FROM ($query)tmp"
 
     executeQuery(insertQuery)
-    getSparkSession.catalog.refreshTable(intermediateTable)
+    spark.catalog.refreshTable(intermediateTable)
 
     readHiveTable(tableName = s"$intermediateTable")
   }
@@ -262,7 +259,7 @@ object KuduUtils extends ContextCreator{
 
       Try{
         logger.info(s"Reading Kudu data for the table or query >> $tableName")
-        val dataFrame : DataFrame = getSparkSession.read
+        val dataFrame : DataFrame = spark.read
         .format(source="jdbc")
         .option("charset","UTF8")
         .options(
@@ -270,7 +267,7 @@ object KuduUtils extends ContextCreator{
             "url"       -> connectionURL,
             "driver"    -> JDBCDriver,
             "dbtable"   -> tableName,
-            "fetchsize" -> 100000
+            "fetchsize" -> 100000.toString
         ) ++ partitions
         )
         .load()

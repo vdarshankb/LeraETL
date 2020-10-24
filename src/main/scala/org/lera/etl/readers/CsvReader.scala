@@ -25,8 +25,8 @@ object CsvReader extends Reader with PipelineBase {
     println("Records in dataframe : " + csvDF.count())
   }
 
-  override def readData(properties: Properties,
-                        spark: SparkSession): DataFrame = {
+  override def readData(properties: Properties
+                       ): DataFrame = {
 
     val filePath = properties.getProperty("filepath-CSV")
     logger.info(s"Reading data from CSV file $filePath")

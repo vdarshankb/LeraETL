@@ -2,10 +2,14 @@ package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
+import org.lera.TableConfig
+import org.lera.etl.util.Constants.StringExpr
 
 import scala.collection.mutable
-import scala.collection.parallel.immutable.ParSeq
-
+import org.lera.etl.util.utils._
+import org.lera.etl.util.Constants._
+import scala.collection.parallel.ParSeq
+import org.apache.spark.sql.functions._
 object ColumnMappingTransformer extends BaseTransformer {
 
   val targetMappingColumns: mutable.Map[String, Array[String]] =
@@ -25,9 +29,9 @@ object ColumnMappingTransformer extends BaseTransformer {
   ): ParSeq[(TableConfig, DataFrame)] = {
 
     val mappingConfigDataFrame: DataFrame =
-      configHandler(dataFrameSeq.keys)(
-        getDefaultTableConfigFunc(columnMappingConfigT)
-      )
+      configHandler(dataFrameSeq.keys) {
+        config => getDefaultTableConfigFunc(columnMappingConfigTableName)(config)
+      }
 
     dataFrameSeq.flatMap(inDataSets => {
 
@@ -130,7 +134,7 @@ object ColumnMappingTransformer extends BaseTransformer {
           skipMissingSourceColumn,
           sourceSystem
         )) {
-      throw new IBPException(
+      throw new Exception(
         s"Missing mapping columns are : ${missingMappingColumns.mkString(StringExpr.comma)}"
       )
     } else if (missingMappingColumns.nonEmpty) {

@@ -4,7 +4,7 @@ import org.apache.spark.sql.DataFrame
 
 object Predicates {
 
-  def readKuduWithPredicates(tableName:String,table:String,partColumn:String):DataFrame={
+  def readKuduWithPredicates(tableName:String,table:String,partColumn:Any):DataFrame={
     null
   }
 

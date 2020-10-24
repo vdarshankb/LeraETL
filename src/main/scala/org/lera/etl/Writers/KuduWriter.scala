@@ -1,8 +1,13 @@
 package org.lera.etl.Writers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
-
+import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.lera.TableConfig
+import org.lera.etl.util.Constants
+import org.lera.etl.util.Constants.StringExpr
+import org.lera.etl.util.utils._
+import org.lera.etl.util.ImpalaConnector._
+import Constants._
 import scala.collection.parallel.immutable.ParSeq
 
 object KuduWriter extends Writer {
@@ -45,7 +50,7 @@ object KuduWriter extends Writer {
           .mode(SaveMode.Overwrite)
           .saveAsTable(tableName = s"$intermediateTableName")
 
-        executeQuery(queries = s"INVALIDATE METADATA $intermediateTableName")
+        executeQuery(query = s"INVALIDATE METADATA $intermediateTableName")
         logger.info(s"Loading data into target table $tableName")
 
         val query: String =
@@ -53,6 +58,7 @@ object KuduWriter extends Writer {
             isFullLoad
           )
 
+        import org.lera.etl.util.Enums.RunStatus._
         executeQuery(query)
         logger.info(s"Successfully loaded data into target table $tableName")
         auditUpdate(tableConf, SUCCESS)

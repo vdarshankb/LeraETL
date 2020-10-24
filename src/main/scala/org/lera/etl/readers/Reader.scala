@@ -22,7 +22,7 @@ trait Reader extends ContextCreator {
    * @return
    */
 
-  def readData(properties: Properties, spark: SparkSession): DataFrame
+  def readData(properties: TableConfig): (TableConfig,DataFrame)
 
   def isFilePathExists(path: String): Boolean = {
     FileSystem.get(new Configuration()).exists(new Path(path))
@@ -42,6 +42,7 @@ trait Reader extends ContextCreator {
 
     import org.lera.etl.util.Enums.Writers.writerType
 
+    import org.lera.etl.util.Parser._
     val targetType: writerType = getTargetType(tableConf.target_table_type)
     val sourceAndRegionList: Array[String] = getSourceSystemsFromSourceData(
       tableConf

@@ -8,15 +8,15 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.{col, trim}
 import org.apache.spark.sql.types.{DataType, StringType}
 import org.apache.spark.sql.{DataFrame, Encoder, Row}
+import org.lera.etl.util.Constants.StringExpr._
+import org.lera.etl.util.Constants._
+import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
+import org.lera.etl.util.Enums._
 import org.lera.{ContextCreator, TableConfig}
-import org.lera.etl.Writers
-import org.lera.etl.util.Enums.RunStatus.RunStatus
 
 import scala.collection.GenSeq
 import scala.collection.parallel.ParSeq
 import scala.util.{Failure, Success, Try}
-import Constants._
-
 /** 
  *  Utility methods and classes for IBP
  *  **/
@@ -25,56 +25,56 @@ object utils extends ContextCreator{
   
   lazy val columnMappingConfigTableName : String = {
     
-    val ibpColumnMappingTable : String = getProperty(ibpColumnMappingTableName)
-    s"$ibpConfigDatabase.$ibpColumnMappingTable"
+    val leraColumnMappingTable : String = getProperty(leraColumnMappingTableName)
+    s"$leraConfigDatabase.$leraColumnMappingTable"
   }
   
   lazy val defaultValuesConfigTableName : String = {
     
-    val defaultTableName : String = getProperty(ibpDefaultValuesTable)
-    s"$ibpConfigDatabase.$defaultTableName"
+    val defaultTableName : String = getProperty(leraDefaultValuesTable)
+    s"$leraConfigDatabase.$defaultTableName"
   }
   
   lazy val joinConfigTableName : String ={
     
-    val joinTableName : String = getProperty(ibpJoinTable)
-    s"$ibpConfigDatabase.$joinTableName"
+    val joinTableName : String = getProperty(leraJoinTable)
+    s"$leraConfigDatabase.$joinTableName"
   }
   
   lazy val lookupConfigTableName : String = {
     
-    val lookupTableName : String = getProperty(ibpLookupTable)
-    s"$ibpConfigDatabase.$lookupTableName"
+    val lookupTableName : String = getProperty(leraLookupTable)
+    s"$leraConfigDatabase.$lookupTableName"
   }
   
   lazy val conditionalMappingConfigTableName : String = {
     
-    val condTableName : String = getProperty(ibpConditionTable)
-    s"$ibpAuditDatabase.$condTableName"
+    val condTableName : String = getProperty(leraConditionTable)
+    s"$leraAuditDatabase.$condTableName"
   }
   
   lazy val deleteColumnConfigTableName : String = {
     
-    val deleteTable : String = getProperty(ibpDeleteTable)
-    s"$ibpConfigDatabase.$deleteTable"
+    val deleteTable : String = getProperty(leraDeleteTable)
+    s"$leraConfigDatabase.$deleteTable"
   }
   
   lazy val filterColumnTableName : String = {
     
-    val filterTable : String = getProperty(ibpFilterTable)
-    s"$ibpConfigDatabase.$filterTable"
+    val filterTable : String = getProperty(leraFilterTable)
+    s"$leraConfigDatabase.$filterTable"
   }
   
   lazy val startTime : Timestamp = now
-  val ibpConfigDatabase : String = getProperty(configDB)
-  val ibpConfigTable : String = getProperty(configTableName)
-  val ibpAuditDatabase : String = getProperty(auditDB)
-  val ibpAuditTable : String = getProperty(ibpAuditTbl)
+  val leraConfigDatabase : String = getProperty(configDB)
+  val leraConfigTable : String = getProperty(configTableName)
+  val leraAuditDatabase : String = getProperty(auditDB)
+  val leraAuditTable : String = getProperty(leraAuditTbl)
   
   val mapSQLValue : Map[String, String] => String =
     _.mapValues(value => s"'$value'")
       .map(tuple => s"${tuple._1}=${tuple._2}")
-        .mkString(sqLAND)
+        .mkString(sqlAND)
         
   val getTargetType : String => Writers.writerType = tableType =>
     Writers
@@ -87,7 +87,7 @@ object utils extends ContextCreator{
       .getOrElse(throw new ETLException("unknown target type"))
 
   val auditUpdate : (TableConfig,RunStatus) => Unit = (config,runState) => {
-    ibpAuditTableUpdate(
+    leraAuditTableUpdate(
     tableRunInfo = TableRunInfo(
     sourceSystem = config.source_system,
     region = config.sourcedata_regionname,
@@ -99,14 +99,14 @@ object utils extends ContextCreator{
     )
   }
 
-  val ibpAuditTableName : String = s"$ibpAuditDatabase.$ibpAuditTable"
-  private val logger : Logger = Logger.getLogger(clazz= this.getClass)
+  val leraAuditTableName : String = s"$leraAuditDatabase.$leraAuditTable"
+  private val logger : Logger = Logger.getLogger( this.getClass)
 
   def selectSQLColumns(values : String*): String =
     values.mkString(StringExpr.comma)
 
   def readSQLFromHDFSFile(filepath : String) : String ={
-    getSparkSession.read.textFile(filepath).collect().mkString
+    spark.read.textFile(filepath).collect().mkString
   }
 
   def insert[T](list : Seq[T], i:Int, value : T)  : Seq[T] = {
@@ -119,16 +119,16 @@ object utils extends ContextCreator{
       .getOption(key = property)
       .getOrElse(StringExpr.empty)
       .trim
-      .split(regex=StringExpr.comma)
+      .split(StringExpr.comma)
       .map(_.trim.toLowerCase)
       .contains(source.toLowerCase)
 
   def isSourceBasedLoad(sourceSystem : String) : Boolean =
     getConf
-      .getOption(targetTruncateKey)
+      .getOption("")
       .getOrElse(empty)
       .trim
-      .split(regex=comma)
+      .split(comma)
       .filterNot(_.isEmpty)
       .map(_.toLowerCase)
       .contains(sourceSystem.toLowerCase)
@@ -149,12 +149,12 @@ object utils extends ContextCreator{
   def JDBC_URL_Generator(baseURL : String, userName : String, password : String) : String = {
 
       baseURL
-        .replace(target = Constants.userName, replacement = userName)
-        .replace(target = Constants.password, replacement = password)
+        .replace( Constants.userName,  userName)
+        .replace( Constants.password,  password)
     }
 
   def readHiveTable(tableName : String) : DataFrame =
-    getSparkSession.table(tableName)
+    spark.table(tableName)
 
   /*
    * Get count of CSV files in HDFS location
@@ -167,24 +167,24 @@ object utils extends ContextCreator{
 
     val fs : FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
     val filepath : String = hdfsFileLocation.replace(
-        target = hdfsFileLocation.split(regex = StringExpr.slash).last,
-        replacement = StringExpr.empty
+         hdfsFileLocation.split( StringExpr.slash).last,
+         StringExpr.empty
     )
 
     val fileNameStartsWith : String = hdfsFileLocation
-      .split(regex = StringExpr.slash)
+      .split( StringExpr.slash)
       .last
-      .split(regex = StringExpr.underscore)(0)
+      .split( StringExpr.underScore)(0)
 
     val fileNameEndWith : String =
-      hdfsFileLocation.split(regex = StringExpr.slash).last.split(regex = StringExpr.dot).last
+      hdfsFileLocation.split( StringExpr.slash).last.split( StringExpr.dot).last
 
     val locationDepth : Int =
-      s"$hdfsFileLocationPrefix$filepath".split(regex = StringExpr.slash).length
+      s"$filepath".split( StringExpr.slash).length
 
-    fs.listStatus( path = new Path(pathString = filepath))
+    fs.listStatus(  new Path( filepath))
       .filterNot(_.isDirectory)
-      .map(_.getPath.toString.split(regex = StringExpr.slash)(locationDepth))
+      .map(_.getPath.toString.split( StringExpr.slash)(locationDepth))
       .filter(_.endsWith(fileNameEndWith))
       .count(_.startsWith(fileNameStartsWith))
   }
@@ -195,8 +195,9 @@ object utils extends ContextCreator{
    * @param tableRunInfo table info
    * */
 
-   def ibpAuditTableUpdate(tableRunInfo : TableRunInfo): Unit = {
+   def leraAuditTableUpdate(tableRunInfo : TableRunInfo): Unit = {
 
+     import Enums.RunStatus._
      //TableRunInfo(sourceSystem : String, tableName : String, loadType : String, status : RunStatus, errorMessage : String = "")
 
      val TableRunInfo(source, regionName, table, loaderType, runInfo, message) =
@@ -204,20 +205,20 @@ object utils extends ContextCreator{
 
      val query : String = runInfo match{
        case RUNNING =>
-         s"INSERT INTO TABLE $ibpAuditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','','$RUNNING','');"
+         s"INSERT INTO TABLE $leraAuditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','','$RUNNING','');"
 
        case SUCCESS =>
-         s"UPDATE $ibpAuditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
+         s"UPDATE $leraAuditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
 
        /*case TableRunInfo(_,_,table,_,FAILED, error) =>
-        * s"UPDATE $ibpAuditTableName SET run_status = '$FAILED', end_time = '$now', message = '$error' WHERE table_name = '$table' AND run_status = 'RUNNING';"
+        * s"UPDATE $leraAuditTableName SET run_status = '$FAILED', end_time = '$now', message = '$error' WHERE table_name = '$table' AND run_status = 'RUNNING';"
         * */
 
        case FAILED =>
-         s"UPSERT INTO TABLE $ibpAuditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
+         s"UPSERT INTO TABLE $leraAuditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
      }
 
-     executeQuery(queries = query)
+//     executeQuery(queries = query)
    }
 
    def getJobStatus(sourceConf : ParSeq[TableConfig]): Array[TableRunInfo] = {
@@ -227,7 +228,7 @@ object utils extends ContextCreator{
 
      val tableConf : TableConfig = sourceConf.head
      val auditDf : DataFrame = KuduUtils.readKuduWithCondition(
-       ibpAuditTableName,
+       leraAuditTableName,
        where = s"source_system='${tableConf.source_system}' AND sourcedata_regionname = '${tableConf.sourcedata_regionname}'" +
          s"AND start_time = '$startTime' AND end_time <= '$now'"
      )
@@ -239,7 +240,7 @@ object utils extends ContextCreator{
              sourceSystem = row.getAs(fieldName = sourceSystem),
              region = row.getAs(fieldName = sourceDataRegionName),
              tableName = row.getAs(fieldName = "table_name"),
-             loadType = row.getAs(fieldName = loadType),
+             loadType = row.getAs(fieldName = "loadType"),
              status = RunStatus.fromString(runStatus = row.getAs(fieldName = "run_status")).get,
              errorMessage = row.getAs(fieldName = "message")
 
@@ -316,7 +317,7 @@ object utils extends ContextCreator{
 
    // Read partition column from table
    def readPartitionColumns(tableName : String) : String = {
-     val columnNames : Array[String] = ContextCreator.getSparkSession
+     val columnNames : Array[String] = spark
        .sql(sqlText = s"DESC $tableName")
        .select(col = "COL_NAME")
        .collect()
@@ -329,7 +330,7 @@ object utils extends ContextCreator{
        )((column, partitionTup) => {
          val (isPartition: Boolean, outColumn : String) = partitionTup
          if(isPartition && !column.trim.isEmpty){
-           if(column.trim.equalsIgnoreCase(anotherString = "# col_name") || column
+           if(column.trim.equalsIgnoreCase("# col_name") || column
                .contains("col_name")) {
              (false,outColumn)
            } else {
@@ -345,13 +346,14 @@ object utils extends ContextCreator{
 
    def handler[B](tableConf : TableConfig)(block : => B) : Seq[B] = {
 
+
      val out : Try[B] = Try(block)
      out match {
        case Success(outValue) => Seq(outValue)
        case Failure(exception) =>
          val trimErrorMessage : String = exception.getMessage
-           .replace(target = StringExpr.quote, replacement = StringExpr.empty)
-           .split(regex = StringExpr.line)(0)
+           .replace( StringExpr.quote,  StringExpr.empty)
+           .split( StringExpr.line)(0)
          val updatedTableConf : TableConfig =
            tableConf.copy(message = tableConf.message + trimErrorMessage)
          auditUpdate(updatedTableConf, FAILED)
@@ -372,8 +374,8 @@ object utils extends ContextCreator{
        case Success(result) => Some(tableConf,result)
        case Failure(exception) =>
          val trimErrorMessage : String = exception.getMessage
-           .replace(target = StringExpr.quote, replacement = StringExpr.empty)
-           .split(regex = StringExpr.line)(0)
+           .replace( StringExpr.quote,  StringExpr.empty)
+           .split( StringExpr.line)(0)
 
          val updatedTableConf : TableConfig =
            tableConf.copy(message = tableConf.message + trimErrorMessage)
@@ -426,7 +428,7 @@ object utils extends ContextCreator{
      }
    }
 
-   implicit class DataFrameUtils(dataFrame : DataFrame) = {
+   implicit class DataFrameUtils(dataFrame : DataFrame){
      /*
       * Remove trailing spaces in df string data
       *
@@ -445,6 +447,8 @@ object utils extends ContextCreator{
          df.withColumn(colName = columnName, col = trim(col(colName = columnName)))
        })
    }
+
+
    }
 
    implicit class OptionUtils[+A](option : Option[A]){
@@ -520,6 +524,26 @@ object utils extends ContextCreator{
        seq.map(_._2).par
      }
    }
+
+
+  def getEmptyTableConfig: TableConfig = {
+    import org.lera.etl.util.Constants.stringNULL
+    TableConfig( stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL,
+      stringNULL
+    )
+  }
 }
 
 class MissingPropertyException(message : String) extends Exception(message)

@@ -1,10 +1,13 @@
 package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Column, DataFrame, Encoders}
+import org.lera.TableConfig
+import org.lera.etl.util.Constants._
 
-import scala.collection.parallel.immutable.ParSeq
-
+import scala.collection.parallel.ParSeq
+import org.lera.etl.util.utils._
+import org.apache.spark.sql.functions._
 /*
  * Lookup transformer does Lookup transformation on input data sets
  *
@@ -49,7 +52,7 @@ object LookupTransformer extends JoinBaseTransformer {
     getJoinMap.foldLeft(sourceDf)(
       (df: DataFrame, lookupInfo: (LookupGroup, Map[String, String])) => {
         logger.info(
-          s"Joining look up tables >> ${tableConf.source_table} with ${lookupInfo._1.look}"
+          s"Joining look up tables >> ${tableConf.source_table} with ${lookupInfo._1.lookupTable}"
         )
 
         val sourceDf: DataFrame = nullReplaceDf(df)(lookupInfo._2.keys.toSeq)

@@ -2,7 +2,8 @@ package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{DataType, IntegerType, StringType, TimestampType}
-
+import org.apache.spark.sql.{Encoder, Encoders}
+import org.lera.etl.util.Constants._
 trait FilterBaseTransformer extends BaseTransformer {
 
   val inConditions: Array[String] = Array("in", "not in")
@@ -43,7 +44,7 @@ trait FilterBaseTransformer extends BaseTransformer {
         tableSchema
           .getOrElse(
             filterIns.filter_col_name.toLowerCase,
-            throw new IBPException(
+            throw new Exception(
               s"Column ${filterIns.filter_col_name} not found in source data"
             )
           ) match {
@@ -56,7 +57,7 @@ trait FilterBaseTransformer extends BaseTransformer {
   val getFilterColumn: String => Map[String, DataType] => String = column =>
     _.getOrElse(
       column.toLowerCase,
-      throw new IBPException(s"Column $column not found in source data")
+      throw new Exception(s"Column $column not found in source data")
     ) match {
       case StringType => s"LOWER($column)"
       case _          => column

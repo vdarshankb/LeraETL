@@ -1,14 +1,17 @@
 package org.lera.etl.Writers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.lera.TableConfig
+import org.lera.etl.util.Constants
 
 import scala.collection.parallel.immutable.ParSeq
 import scala.util.{Success, Try}
-
+import org.lera.etl.util.utils._
+import org.lera.etl.util.Constants._
+import org.lera.etl.util.ImpalaConnector._
+import org.lera.etl.util.Enums.RunStatus._
 object HiveWriter extends Writer {
-  // val session : SparkSession = ContextCreator.getSparkSession
   private val logger: Logger = Logger.getLogger(HiveWriter.getClass)
 
   /*
@@ -40,7 +43,7 @@ object HiveWriter extends Writer {
           if (load_type.equalsIgnoreCase(Constants.fullLoadType) || load_type
                 .toLowerCase()
                 .contains(Constants.fullLoadType.toLowerCase)) {
-            ValidateFullLoad(df, tableConf.source_system, finalTargetTableName)
+            validateFullLoad(df, tableConf.source_system, finalTargetTableName)
           } else df
 
         updatedDf.createTempView(viewName = s"${tableName}_temp_view")
@@ -58,7 +61,7 @@ object HiveWriter extends Writer {
         }
 
       }
-
+val finalTargetTableName=s"${tableConf.target_database}.${tableConf.target_table}"
       validateTableMetadata(finalTargetTableName)
       logger.info(
         s"Data loaded successfully into target Hive table $finalTargetTableName"
@@ -86,8 +89,8 @@ object HiveWriter extends Writer {
   def validateTableMetadata(targetTableName: String)(): Unit = {
 
     Try {
-      executeQuery(queries = "SET QUERY_TIMEOUT_S-120;")
-      executeQuery(queries = s"INVALIDATE METADATA $targetTableName")
+      executeQuery(query = "SET QUERY_TIMEOUT_S-120;")
+      executeQuery(query = s"INVALIDATE METADATA $targetTableName")
     } match {
       case Success(_) =>
         logger.info(s"Invalidated metadata for table $targetTableName")
@@ -106,13 +109,13 @@ object HiveWriter extends Writer {
       s"Partition columns for table $targetTableName are $partitionColumns"
     )
 
-    session.sql(sqlText = "SET hive.exec.dynamic.partition = true")
-    session.sql(sqlText = "SET hive.exec.dynamic.partition.mode = nonstrict")
+    spark.sql(sqlText = "SET hive.exec.dynamic.partition = true")
+    spark.sql(sqlText = "SET hive.exec.dynamic.partition.mode = nonstrict")
     logger.debug(
       s"Executing query : INSERT OVERWRITE TABLE $targetTableName PARTITION $partitionColumns"
     )
 
-    session.sql(
+    spark.sql(
       sqlText =
         s"INSERT OVERWRITE TABLE $targetTableName PARTITION $partitionColumns"
     )
@@ -122,7 +125,7 @@ object HiveWriter extends Writer {
   private def validateFullLoad(df: DataFrame,
                                source_system: String,
                                targetTableName: String): DataFrame = {
-
+    import org.apache.spark.sql.functions._
     val fullLoadDf = if (isSourceBasedLoad(source_system)) {
 
       val cond: DataFrame => DataFrame = targetDataFrame =>
@@ -140,11 +143,11 @@ object HiveWriter extends Writer {
 
       val unionDf: DataFrame = df.union(cond(readHiveTable(targetTableName)))
       unionDf.write
-        .mode(Overwrite)
-        .saveAsTable(tableName = s"$targetTableName_temp")
-      readHiveTable(tableName = s"$targetTableName_temp")
+        .mode(SaveMode.Overwrite)
+        .saveAsTable(tableName = s"${targetTableName}_temp")
+      readHiveTable(tableName = s"${targetTableName}_temp")
     } else df
-    session.sql(sqlText = s"TRUNCATE TABLE $targetTableName")
+    spark.sql(sqlText = s"TRUNCATE TABLE $targetTableName")
     fullLoadDf
   }
 

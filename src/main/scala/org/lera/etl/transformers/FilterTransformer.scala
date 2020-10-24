@@ -4,7 +4,11 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataType
 
-import scala.collection.parallel.immutable.ParSeq
+import org.lera.TableConfig
+import org.lera.etl.util.Constants._
+import scala.collection.parallel.ParSeq
+import org.lera.etl.util.utils._
+import org.apache.spark.sql.functions._
 
 object FilterTransformer extends FilterBaseTransformer{
   

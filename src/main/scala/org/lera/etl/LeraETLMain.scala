@@ -1,11 +1,14 @@
 package org.lera.etl
 
 import org.apache.log4j.Logger
+import org.apache.spark.sql.DataFrame
 import org.lera.etl.util.Constants.StringExpr
-import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo}
+import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo, utils}
 import org.lera.{ContextCreator, TableConfig}
+import org.lera.etl.util.utils._
+import org.lera.etl.util.Parser._
 
-import scala.collection.parallel.immutable.ParSeq
+import scala.collection.parallel.ParSeq
 import scala.util.Try
 object LeraETLMain extends ContextCreator {
 
@@ -32,7 +35,7 @@ object LeraETLMain extends ContextCreator {
 
     val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) =
       getTableConfig(args)
-    val ingestionThread: Future[Unit] = Future(startIngestionProcess)
+    val ingestionThread: Future[Unit] = Future(startIngestionProcess(null,null))
 
     ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
   }
@@ -101,8 +104,7 @@ object LeraETLMain extends ContextCreator {
       }
     }
     logger.info(s"Fatal time taken for execution: ${diffMinutes} minutes")
-    val failedJobs: Array[TableRunInfo] =
-      (config)
+    val failedJobs: Array[TableRunInfo] =null
     // Close the spark session as job completed
 
     if (failedJobs.isEmpty) {
@@ -130,7 +132,7 @@ object LeraETLMain extends ContextCreator {
       )
 
       throw new ETLException(
-        s"Data load failed for the table ${failedJobs.head.table_name} due to ${failedJobs.head.errorMessage}"
+        s"Data load failed for the table ${failedJobs.head.tableName} due to ${failedJobs.head.errorMessage}"
       )
 
     }
@@ -239,6 +241,7 @@ object LeraETLMain extends ContextCreator {
     logger.info(
       "Database and table information are parsed from the config table"
     )
+    import org.lera.etl.util.Enums.RunStatus._
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {
         auditUpdate(tableConfig, RUNNING)
@@ -246,7 +249,7 @@ object LeraETLMain extends ContextCreator {
       })
       .flatMap(tableConfig => {
         handler(tableConfig)(
-          getReaderInstance(tableConfig.source_table_type).readData(tableConfig)
+          getReaderInstance(tableConfig.source_table_type).readData(tableConfig,spark )
         )
 
       })

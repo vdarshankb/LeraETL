@@ -7,7 +7,7 @@ object EmailSMTPClient {
   def createHTMLBody(message:Seq[TableConfig], time:String, state:String)={
     ""
   }
-  def sendMail(content:String,)={
+  def sendMail(content:String,recp:String,sub:String)={
 
   }
 

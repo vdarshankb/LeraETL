@@ -9,19 +9,19 @@
         <!-- https://mvnrepository.com/artifact/com.crealytics/spark-excel -->
         <dependency>
             <groupId>com.crealytics</groupId>
-            <artifactId>spark-excel_2.12</artifactId>
+            <artifactId>spark-excel_2.11</artifactId>
             <version>0.13.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core -->
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.12</artifactId>
+            <artifactId>spark-core_2.11</artifactId>
             <version>2.4.4</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql -->
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.12</artifactId>
+            <artifactId>spark-sql_2.11</artifactId>
             <version>2.4.4</version>
         </dependency>
 
@@ -30,7 +30,7 @@
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.12.0</version>
+            <version>2.11.8</version>
         </dependency>
 
 
