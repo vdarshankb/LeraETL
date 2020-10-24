@@ -1,12 +1,12 @@
 package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
-
+import org.apache.spark.sql.{Column, DataFrame, Encoders}
+import org.lera.TableConfig
 import org.lera.etl.util.Constants._
-import scala.collection.parallel.ParSeq
 import org.lera.etl.util.utils._
 
+import scala.collection.parallel.ParSeq
 object JoinTransformer extends JoinBaseTransformer {
 
   private val logger: Logger = Logger.getLogger(JoinTransformer.getClass)
@@ -41,7 +41,7 @@ object JoinTransformer extends JoinBaseTransformer {
     getJoinMap: Seq[(JoinTable, Map[String, String])]
   ): DataFrame = {
     getJoinMap.foldLeft(sourceDf)(
-      (df: DataFrame, joinInfo: (joinTable, Map[String, String])) => {
+      (df: DataFrame, joinInfo: (JoinTable, Map[String, String])) => {
         logger.info(
           s"joining lookup tables >> ${tableConf.source_table} with ${joinInfo._1.lookupTable}"
         )
@@ -83,7 +83,7 @@ object JoinTransformer extends JoinBaseTransformer {
         sourceDB -> tableConf.source_database,
         sourceTable -> tableConf.source_table,
         targetDB -> tableConf.target_database,
-        targetTable -> tableConf.target_table,
+        targetTable -> tableConf.target_table
       ).toWhereCondition.ignoreCaseInSQL
 
     val joinTableDf: Array[JoinLookup] = configDataFrame

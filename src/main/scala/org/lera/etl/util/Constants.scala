@@ -10,6 +10,7 @@ val stringNULL="null"
   val sourceSystem: String = "source_system"
   val sourceDataRegionName: String = "sourcedata_regionName"
 
+
   val partitionColumn: String = ""
   val numOfPartitions: String = ""
 
@@ -85,6 +86,20 @@ val stringNULL="null"
   val status: String = "status"
   val inActive: String = "inactive"
   val rowNumber: String = "row_num"
+  val monthYear: String             = "month_year"
+  val monthYearSourceFormat: String = "yyyyMM"
+  val monthYearTargetFormat: String = "MMM-yyyy"
+  val fiscalYear: String            = "fiscal_year"
+  val fiscalWeekOfYear: String      = "fiscal_week_year"
+  val fiscalYearFormat: String      = "yyyy"
+  val weekOfMonth: String           = "week_of_month"
+  val weekOfYear: String            = "week_of_year"
+  val loadDate: String              = "loaddate"
+  val yyyymm: String                = "yyyymm"
+  val fiscal_year: String           = "fiscal_year"
+  val month_year: String            = "month_year"
+  val fiscal_timestamp: String      = "fiscal_timestamp"
+
 
   object StringExpr {
 

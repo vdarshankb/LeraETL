@@ -8,6 +8,7 @@ import org.lera.etl.util.Constants
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.utils._
 import org.lera.etl.util.Enums.Writers.writerType
+import org.lera.etl.util.KuduUtils._
 
 object KuduReader extends Reader {
 

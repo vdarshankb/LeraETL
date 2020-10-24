@@ -1,23 +1,22 @@
 package org.lera
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
 import org.lera.etl.readers.{KuduReader, Reader}
-
+import org.lera.etl.util.Constants.fullLoadType
 package object etl extends ContextCreator {
 
-  val getReaderInstance: String => Reader = {
-    case _ => KuduReader
-  }
-  val ibpAuditDatabase = getProperty("spark.audit_database")
-  val ibpConfigDatabase = getProperty("spark.audit_database")
+
+  val ibpAuditDatabase: String = getProperty("spark.audit_database")
+  val ibpConfigDatabase: String = getProperty("spark.audit_database")
 
   def getTableConfig(sourceSystem: String,
                      region: String,
                      loadType: String,
-                     tableNames: String) = {
+                     tableNames: String): TableConfig = {
     TableConfig(
       sourceSystem,
       region,
@@ -70,6 +69,11 @@ case class DateTimeConvert(
                             sourceFormat:String,
                             targetFormat:String
                           )
+case class TimeConvert(sourceColumn: String,
+                       targetColumn: String,
+                       sourceTime: TimeUnit,
+                       targetTime: TimeUnit)
+
 trait ContextCreator {
 
   lazy val spark: SparkSession =

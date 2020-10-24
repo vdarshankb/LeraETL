@@ -1,15 +1,20 @@
 package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{DataType, IntegerType, StringType, TimestampType}
+import org.apache.spark.sql.types.{
+  DataType,
+  IntegerType,
+  StringType,
+  TimestampType
+}
 import org.apache.spark.sql.{Encoder, Encoders}
 import org.lera.etl.util.Constants._
+
 trait FilterBaseTransformer extends BaseTransformer {
 
   val inConditions: Array[String] = Array("in", "not in")
 
-  implicit val filterEncoder: Encoder[FilterData] =
-    Encoders.product[FilterData]
+  implicit val filterEncoder: Encoder[FilterData] = Encoders.product[FilterData]
 
   val likeConditions: Array[String] = Array("like", "not like")
 

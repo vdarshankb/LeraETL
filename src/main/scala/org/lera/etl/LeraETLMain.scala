@@ -3,10 +3,10 @@ package org.lera.etl
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.lera.etl.util.Constants.StringExpr
-import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo, utils}
-import org.lera.{ContextCreator, TableConfig}
-import org.lera.etl.util.utils._
 import org.lera.etl.util.Parser._
+import org.lera.etl.util.utils._
+import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo}
+import org.lera.{ContextCreator, TableConfig}
 
 import scala.collection.parallel.ParSeq
 import scala.util.Try
@@ -98,12 +98,12 @@ object LeraETLMain extends ContextCreator {
         )
 
         throw new ETLException(
-          s"Job was running more than cut off time (${diffMinutes} Minutes) so killing the job"
+          s"Job was running more than cut off time ($diffMinutes Minutes) so killing the job"
         )
 
       }
     }
-    logger.info(s"Fatal time taken for execution: ${diffMinutes} minutes")
+    logger.info(s"Fatal time taken for execution: $diffMinutes minutes")
     val failedJobs: Array[TableRunInfo] =null
     // Close the spark session as job completed
 
@@ -249,7 +249,7 @@ object LeraETLMain extends ContextCreator {
       })
       .flatMap(tableConfig => {
         handler(tableConfig)(
-          getReaderInstance(tableConfig.source_table_type).readData(tableConfig,spark )
+          getReaderInstance(tableConfig.source_table_type).readData(tableConfig)
         )
 
       })

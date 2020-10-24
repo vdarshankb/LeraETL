@@ -5,12 +5,13 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.lera.TableConfig
 import org.lera.etl.util.Constants
 
-import scala.collection.parallel.immutable.ParSeq
 import scala.util.{Success, Try}
 import org.lera.etl.util.utils._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.ImpalaConnector._
 import org.lera.etl.util.Enums.RunStatus._
+
+import scala.collection.parallel.ParSeq
 object HiveWriter extends Writer {
   private val logger: Logger = Logger.getLogger(HiveWriter.getClass)
 
@@ -49,7 +50,7 @@ object HiveWriter extends Writer {
         updatedDf.createTempView(viewName = s"${tableName}_temp_view")
         val columns = updatedDf.columns.mkString(StringExpr.comma)
 
-        if (partitionColumns.isEmpty()) {
+        if (partitionColumns.isEmpty) {
           loadNonPartitionedData(tableName, finalTargetTableName, columns)
         } else {
           loadPartitionedData(

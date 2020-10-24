@@ -4,14 +4,13 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.lera.TableConfig
 import org.lera.etl.util.Constants._
-import scala.collection.parallel.ParSeq
 import org.lera.etl.util.utils._
-import org.apache.spark.sql.functions._
+
+import scala.collection.parallel.ParSeq
 object DeleteTransformer extends FilterBaseTransformer {
 
   import org.apache.spark.sql.types.DataType
 
-  import scala.collection.parallel.immutable.ParSeq
 
   val getDeleteCond: String => String = {
     case ">"        => "<"
@@ -65,7 +64,7 @@ object DeleteTransformer extends FilterBaseTransformer {
         val conditionalExpr: String =
           getConditionalExpr(conf.source_table, tableSchema, groupedDeletes)
 
-        if (conditionalExpr.isEmpty()) df
+        if (conditionalExpr.isEmpty) df
         else df.where(conditionalExpr)
       }
     })
@@ -79,7 +78,7 @@ object DeleteTransformer extends FilterBaseTransformer {
   ): String = {
 
     val getFilterValue: FilterData => String = getFilterValueFunc(tableSchema)
-    val getfilterColumns: String => String = getFilterColumn(_)(tableSchema)
+    val getFilterColumns: String => String = getFilterColumn(_)(tableSchema)
     val conditionalExpr =
       groupedDeletes
         .map(tup => {
@@ -108,7 +107,7 @@ object DeleteTransformer extends FilterBaseTransformer {
 
     val finalCondition: String = if (conditionalExpr.nonEmpty) {
       conditionalExpr.substring(0, conditionalExpr.length - 4)
-    } else conditionalExpr.empty
+    } else StringExpr.empty
 
     logger.info(
       s"Final delete condition for source system $source_table is $finalCondition"
@@ -127,20 +126,20 @@ object DeleteTransformer extends FilterBaseTransformer {
     val whereQuery: String =
       Map(sourceTable -> source_table).toWhereCondition.ignoreCaseInSQL
 
-    //   import utils.ContextCreator.getSparkSession
+   import spark.implicits._
 
 
     val deleteDataArray: Array[FilterData] = configDataFrame
       .where(whereQuery)
       .select(
-        $"delete_col_name".as(alias = "filter_col_name"),
-        $"delete_condition".as(alias = "filter_condition"),
-        $"delete_value".as(alias = "filter_value"),
+        $"delete_col_name".as( "filter_col_name"),
+        $"delete_condition".as( "filter_condition"),
+        $"delete_value".as( "filter_value"),
         $"logical_operator",
-        $"delete_order".as(alias = "filter_order"),
+        $"delete_order".as( "filter_order"),
         $"group_order"
       )
-      .as(FilterData)
+      .as[FilterData]
       .collect()
 
     deleteDataArray

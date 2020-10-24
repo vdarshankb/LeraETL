@@ -1,16 +1,15 @@
 package org.lera.etl.readers
 
-import java.util.Properties
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.functions.{max, min}
 import org.apache.spark.sql.types.{DataType, LongType, StringType, TimestampType}
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Writers
 import org.lera.etl.util.Enums.Writers._
 import org.lera.etl.util.KuduUtils._
+import org.lera.etl.util.utils._
 import org.lera.{ContextCreator, TableConfig}
 
 trait Reader extends ContextCreator {
@@ -41,8 +40,6 @@ trait Reader extends ContextCreator {
   ): DataFrame = {
 
     import org.lera.etl.util.Enums.Writers.writerType
-
-    import org.lera.etl.util.Parser._
     val targetType: writerType = getTargetType(tableConf.target_table_type)
     val sourceAndRegionList: Array[String] = getSourceSystemsFromSourceData(
       tableConf

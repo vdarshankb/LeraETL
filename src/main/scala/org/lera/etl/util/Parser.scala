@@ -12,19 +12,7 @@ import org.lera.etl.util.utils._
 
 import scala.collection.parallel.ParSeq
 
-/*case class TableConfig(source_system:String,
-                       sourcedata_regionname:String,
-                       source_table_type: String,
-                       target_table_type : String,
-                       source_database : String,
-                       source_table : String,
-                       file_path : String,
-                       target_database : String,
-                       target_table : String,
-                       load_type : String,
-                       source_increment_column : String,
-                       target_increment_column : String,
-                       message : String = "")*/
+
 
 //Added case class for loading partition table
                        
@@ -158,7 +146,7 @@ object Parser extends ContextCreator {
     if(null != loadTypeArgu){
       val loaderType : String =
         LoaderType.fromString(loadType = loadTypeArgu.toLowerCase) match {
-        case Some(outValue) => outValue.toString().toLowerCase()
+        case Some(outValue) => outValue.toString.toLowerCase()
         case _ =>
           val loaderUpdate : ParSeq[TableConfig] =
             tableConfigs.map(ins => ins.copy(load_type = loadTypeArgu))

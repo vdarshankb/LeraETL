@@ -3,12 +3,11 @@ package org.lera.etl.transformers
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataType
-
 import org.lera.TableConfig
 import org.lera.etl.util.Constants._
-import scala.collection.parallel.ParSeq
 import org.lera.etl.util.utils._
-import org.apache.spark.sql.functions._
+
+import scala.collection.parallel.ParSeq
 
 object FilterTransformer extends FilterBaseTransformer{
   
@@ -28,7 +27,7 @@ object FilterTransformer extends FilterBaseTransformer{
     val filterConfigDataFrame : DataFrame =
       configHandler(dataFrameSeq.keys)(getTableConfigFunc(filterColumnTableName))
       dataFrameSeq.flatMap((confDataSetTup : (TableConfig, DataFrame)) => {
-        val (conf,df) = (TableConfig, DataFrame) = confDataSetTup
+        val (conf,df)  = confDataSetTup
         
         errorHandler(conf){
           val source_table : String = conf.source_table
@@ -68,13 +67,13 @@ object FilterTransformer extends FilterBaseTransformer{
     val conditionalExpr : String = groupedFilters
       .map(tup => {
         val conditionCheckFunc : FilterData => String = filterDataIns =>
-          s"${getFilterColumns(filterDataIns.filter_col_name)} ${filterDataIns.filter_}"
+          s"${getFilterColumns(filterDataIns.filter_col_name)} ${filterDataIns.filter_condition} ${getFilterValue(filterDataIns)}"
           
         val condExpr : String = tup._2 
           .dropRight(1)
           .foldLeft(StringExpr.empty)(
           (startCond : String, filterDataIns : FilterData) => {
-            s"${startCond} ${conditionCheckFunc(filterDataIns)} ${filterDataIns.logical_operator}"
+            s"${startCond} ${conditionCheckFunc(filterDataIns)} ${filterDataIns.logical_operator}".trim
           }    
           )
           
@@ -112,17 +111,15 @@ object FilterTransformer extends FilterBaseTransformer{
       Map(
       sourceTable -> source_table    
       ).toWhereCondition.ignoreCaseInSQL
-      
+
     val filterDataArray : Array[FilterData]= filterConfigDataFrame
     .where(whereQuery)
-    .selectExpr(expr = "filter_col_name",
+    .selectExpr( "filter_col_name",
                  "filter_condition",
                  "filter_value",
                  "logical_operator",
                  "filter_order",
-                 "group_order")
-    .as(FilterData)
-    .collect()
+                 "group_order").as[FilterData].collect()
     
     filterDataArray
     .groupBy(_.group_order)

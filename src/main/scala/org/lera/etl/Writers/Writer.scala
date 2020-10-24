@@ -4,7 +4,8 @@ import org.apache.spark.sql.DataFrame
 import org.lera.{ContextCreator, TableConfig}
 import org.lera.etl.util.Constants._
 
-import scala.collection.parallel.immutable.ParSeq
+import scala.collection.parallel.ParSeq
+
 
 /*
  * Writer for persisting dataset into target system

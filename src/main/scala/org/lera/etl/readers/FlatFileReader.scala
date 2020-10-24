@@ -66,7 +66,7 @@ object FlatFileReader extends Reader {
               .isEmpty && row.length > 0
         )
       )
-      .trimColumnTrailingSpace
+      .trimColumnTrailingSpace()
   }
 
   /*
@@ -83,7 +83,7 @@ object FlatFileReader extends Reader {
 
     spark.read
       .format("csv")
-      .option("header", true)
+      .option("header", true.toString)
       .option("quote", "\"")
       .option("escape", "\"")
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
