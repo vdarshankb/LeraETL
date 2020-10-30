@@ -51,7 +51,7 @@ object KuduWriter extends Writer {
           .mode(SaveMode.Overwrite)
           .saveAsTable(tableName = s"$intermediateTableName")
 
-        executeQuery(query = s"INVALIDATE METADATA $intermediateTableName")
+        executeQuery( s"INVALIDATE METADATA $intermediateTableName")
         logger.info(s"Loading data into target table $tableName")
 
         val query: String =

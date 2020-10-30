@@ -5,6 +5,7 @@ import java.util.Properties
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+/*
 object ExcelReadr extends Reader with PipelineBase {
 
   private val logger: Logger = Logger.getLogger(ExcelReadr.getClass)
@@ -153,3 +154,4 @@ object ExcelReadr extends Reader with PipelineBase {
   }
 
 }
+*/

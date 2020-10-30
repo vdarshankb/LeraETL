@@ -10,14 +10,17 @@ object KuduUtils extends ContextCreator{
 
   import org.apache.log4j.Logger
   import org.apache.spark.sql.DataFrame
-
   import scala.util.Try
 
   lazy val defaultNoOfPartitions : Int = getConf
     .getOption(key = "spark.kudu_default_partitions")
     .getOrElse(200.toString)
     .toInt
-  val dataFrameCache : scala.collection.mutable.Map[String, DataFrame] = scala.collection.mutable.Map.empty[String, DataFrame]
+
+  //val test: ParMap[String, DataFrame] = ParMap.empty[String, DataFrame]
+
+  val dataFrameCache: scala.collection.mutable.Map[String, DataFrame] = scala.collection.mutable.Map.empty[String, DataFrame]
+
   private val logger : Logger = Logger.getLogger(this.getClass)
 
   /*
@@ -40,27 +43,22 @@ object KuduUtils extends ContextCreator{
         .load_type}_$condition"
     dataFrameCache.getOrElse(
         cacheKey, {
-        val isHiveIntermediateRequired : Boolean = isHiveIntermediateEnabled(tableConf
-            .source_system)
-
+        val isHiveIntermediateRequired: Boolean = isHiveIntermediateEnabled(tableConf.source_system)
         val tableName : String = s"${tableConf.source_database}.${tableConf.source_table}"
         val whereCond : String = if(condition.isEmpty) StringExpr.empty else s"WHERE $condition"
 	      val selectQuery : String = s"SELECT * FROM $tableName $whereCond"
-
 	      val sourceDataFrame: DataFrame =
 	        if(isHiveIntermediateRequired)
-	          readKuduUsingHive(selectQuery, tableConf.target_database, tableConf
-	              .source_table)
+	          readKuduUsingHive(selectQuery, tableConf.target_database, tableConf.source_table)
 	        else {
-	          val partitionData : Array[PartitionTableConfig] = getPartitionTableValues(tableConf)
-
-	          val kuduSelectQuery : String = s"($selectQuery)temp_table"
+	          val partitionData: Array[PartitionTableConfig] = getPartitionTableValues(tableConf)
+	          val kuduSelectQuery: String = s"($selectQuery)temp_table"
 
 	          if(partitionData.nonEmpty){
 	            logger
 	            .info("Reading table with Partition details")
 	  //        readKuduWithPartition(kuduSelectQuery,partitionData.head)(condition)
-	            Predicates.readKuduWithPredicates(tableName, tableName, partitionData.head)
+	            Predicates.readKuduWithPredicates(tableName, tableName, partitionData.head)(condition)
 	          } else {
 	            readKuduTable(kuduSelectQuery)(defaultNoOfPartitions)
 	          }

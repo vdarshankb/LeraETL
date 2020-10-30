@@ -29,6 +29,7 @@ case class PartitionTableConfig(source_system:String,
 /* 
  * Parser used to parse the table config properties from kudu meta data table
  * */
+
 object Parser extends ContextCreator {
   
 
@@ -123,9 +124,7 @@ object Parser extends ContextCreator {
                       loadTypeArgu: String,
                       tableName : Seq[String]) : ParSeq[TableConfig] = {
     logger.info(s"Parsing table config for source system : $sourceSystem")
-    logger.info(
-    s"Transformations and data ingestion for all the tables under the system : $sourceSystem"    
-    )
+    logger.info(s"Transformations and data ingestion for all the tables under the system: $sourceSystem")
     
     val filterCondition : String =
       s"${Constants.sourceSystem}='$sourceSystem' AND ${Constants.sourceDataRegionName}='$region'"

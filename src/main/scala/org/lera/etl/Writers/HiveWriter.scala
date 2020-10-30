@@ -90,8 +90,8 @@ val finalTargetTableName=s"${tableConf.target_database}.${tableConf.target_table
   def validateTableMetadata(targetTableName: String)(): Unit = {
 
     Try {
-      executeQuery(query = "SET QUERY_TIMEOUT_S-120;")
-      executeQuery(query = s"INVALIDATE METADATA $targetTableName")
+      executeQuery("SET QUERY_TIMEOUT_S-120;")
+      executeQuery(s"INVALIDATE METADATA $targetTableName")
     } match {
       case Success(_) =>
         logger.info(s"Invalidated metadata for table $targetTableName")

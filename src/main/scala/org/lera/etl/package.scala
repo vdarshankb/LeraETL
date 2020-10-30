@@ -7,8 +7,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
 import org.lera.etl.readers.{KuduReader, Reader}
 import org.lera.etl.util.Constants.fullLoadType
-package object etl extends ContextCreator {
 
+package object etl extends ContextCreator {
 
   val ibpAuditDatabase: String = getProperty("spark.audit_database")
   val ibpConfigDatabase: String = getProperty("spark.audit_database")
@@ -42,9 +42,7 @@ package object etl extends ContextCreator {
         df.withColumn(column, trim(col(column)))
       })
     }
-
   }
-
 }
 
 case class TableConfig(source_table: String,
@@ -76,15 +74,13 @@ case class TimeConvert(sourceColumn: String,
 
 trait ContextCreator {
 
-  lazy val spark: SparkSession =
-    SparkSession.builder().appName("test").getOrCreate()
+  lazy val spark: SparkSession = SparkSession.builder().config("spark.master", "local").appName("etlapplication").getOrCreate()
   lazy val getConf: RuntimeConfig = spark.conf
   lazy val sparkConf: RuntimeConfig = spark.conf
   val session: SparkSession = spark
 
   def getProperty(propertyName: String): String = {
     spark.conf.get(propertyName)
-
   }
 
 }
