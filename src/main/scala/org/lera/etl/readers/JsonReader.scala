@@ -7,6 +7,9 @@ import org.apache.spark.sql.functions.{col, explode}
 import org.apache.spark.sql.types.{ArrayType, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+/*
+
+
 object JsonReader extends Reader with PipelineBase {
 
   private val logger: Logger = Logger.getLogger(ExcelReadr.getClass)
@@ -143,3 +146,5 @@ object JsonReader extends Reader with PipelineBase {
   }
 
 }
+
+*/

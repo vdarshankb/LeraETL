@@ -10,16 +10,18 @@ import org.lera.{ContextCreator, TableConfig}
 
 import scala.collection.parallel.ParSeq
 import scala.util.Try
+
 object LeraETLMain extends ContextCreator {
 
   import scala.concurrent.Future
+
   private val logger: Logger = Logger.getLogger(LeraETLMain.getClass)
 
   def main(args: Array[String]): Unit = {
 
     if ((args.length > 2 && null == args(2)) || (args.length == 2)) {
       logger.info(
-        "Only two out of three arguments are provided. Load type paramter is taken from "
+        "Only two out of three arguments are provided. Load type parameter is taken from "
       )
     }
 
@@ -35,17 +37,23 @@ object LeraETLMain extends ContextCreator {
 
     val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) =
       getTableConfig(args)
+
     val ingestionThread: Future[Unit] = Future(startIngestionProcess(null,null))
 
     ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
+
   }
 
   def ingestionMonitor(ingestionThread: Future[Unit],
                        config: ParSeq[TableConfig],
                        sourceSystem: String): Unit = {
+
     import java.sql.Timestamp
+
     val (notifyInterval: Int, maxRunTime: Int) = getControl(sourceSystem)
+
     println(notifyInterval, maxRunTime)
+
     logger.info(s"Notify Interval : $notifyInterval, maxRunTime : $maxRunTime")
     val startTime: Timestamp = now
 
@@ -74,6 +82,7 @@ object LeraETLMain extends ContextCreator {
       s"${getHours(diff)} ${getMinutes(diff)} ${diffSeconds(diff)}".trim
 
     var timeTaken = notifyInterval
+
     while (!ingestionThread.isCompleted) {
       Thread.sleep(10000)
       if (diffMinutes >= timeTaken) {
@@ -145,7 +154,7 @@ object LeraETLMain extends ContextCreator {
     val controlDf = KuduUtils
       .readKuduWithCondition(
         tableName,
-        where = s"lower(source_system)- '${sourceSystem.toLowerCase()}'"
+        where = s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
       )
 
     if (controlDf.isEmpty) {
@@ -167,7 +176,7 @@ object LeraETLMain extends ContextCreator {
         .map(
           row =>
             (
-              row.getAs[Int](fieldName = "notification_interval"),
+              row.getAs[Int]("notification_interval"),
               row.getAs[Int]("")
           )
         )
@@ -185,18 +194,26 @@ object LeraETLMain extends ContextCreator {
       s"${getProperty("spark.ibp_notification_mail_subject")} for $sourceSystem is "
 
     import EmailSMTPClient._
+
     val completeSubject: String = subject + message
+
+/* Remove ths comment when you want to send the email notifications
+
     EmailSMTPClient
       .sendMail(
         createHTMLBody(config.seq, runTime, message),
         completeSubject,
         recipients
       )
+*/
   }
 
   def getTableConfig(args: Array[String]): (String, ParSeq[TableConfig]) = {
+
     import scala.util.{Failure, Success}
+
     val (sourceSystem, region) = (args(0), args(1))
+
     Try {
 
       val loadType: String = Try(args(2)).getOrElse(null)
@@ -227,8 +244,8 @@ object LeraETLMain extends ContextCreator {
         sendEmailNotification(
           Seq(emptyConf).par,
           sourceSystem,
-          message = "failed",
-          runTime = ""
+          "failed",
+          ""
         )
         throw exception
     }
@@ -237,11 +254,11 @@ object LeraETLMain extends ContextCreator {
 
   def startIngestionProcess(sourceSystem: String,
                             tableConfigs: ParSeq[TableConfig]): Unit = {
-
     logger.info(
       "Database and table information are parsed from the config table"
     )
     import org.lera.etl.util.Enums.RunStatus._
+
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {
         auditUpdate(tableConfig, RUNNING)
@@ -251,7 +268,6 @@ object LeraETLMain extends ContextCreator {
         handler(tableConfig)(
           getReaderInstance(tableConfig.source_table_type).readData(tableConfig)
         )
-
       })
 
     // Retain the below line for local testing

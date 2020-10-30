@@ -147,7 +147,6 @@ object utils extends ContextCreator{
    * */
 
   def JDBC_URL_Generator(baseURL : String, userName : String, password : String) : String = {
-
       baseURL
         .replace( Constants.userName,  userName)
         .replace( Constants.password,  password)
@@ -164,7 +163,6 @@ object utils extends ContextCreator{
    * */
 
   def getNumberOfFiles(hdfsFileLocation : String) : Int = {
-
     val fs : FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
     val filepath : String = hdfsFileLocation.replace(
          hdfsFileLocation.split( StringExpr.slash).last,
