@@ -1,10 +1,10 @@
 package org.lera.etl.util
-import java.sql.DriverManager
+import java.sql.{Connection, DriverManager, Statement}
 import java.util.Properties
 
-import org.apache.spark.sql._
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.lera.etl.util.utils.JDBC_URL_Generator
+
+import scala.util.{Failure, Success}
 
 /*
 
@@ -27,12 +27,11 @@ import org.lera.etl.util.utils.JDBC_URL_Generator
 }
 */
 
+import org.apache.log4j.Logger
 import org.lera.ContextCreator
 import org.lera.etl.util.Constants._
-import org.apache.log4j.Logger
-import org.lera.etl.util._
+
 import scala.util.Try
-import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object ImpalaConnector extends ContextCreator{
 
@@ -104,7 +103,7 @@ object ImpalaConnector extends ContextCreator{
   *@param queries prepared query statement
   **/
 
-  def executeQuery(queries : String*) = {
+  def executeQuery(queries : String*): Boolean = {
     logger.info(s"Executing query in Impala:: $queries")
     Try {
       queries.foreach(query => {

@@ -1,13 +1,9 @@
 package org.lera.etl.util
-import org.apache.spark.sql.DataFrame
 import java.util.Properties
 
+import org.apache.spark.sql.DataFrame
 import org.lera.ContextCreator
-import org.lera.etl._
-import org.lera.etl
 import org.lera.etl.util.Constants._
-import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.lera.etl.util.ImpalaConnector.{JDBCDriver, connectionURL, statement}
 
 import scala.util.Try
@@ -46,12 +42,9 @@ import scala.util.Try
   }
  */
 
-object Predicates{
-
-  import org.lera.etl._
+object Predicates extends ContextCreator {
 
 
-  val spark: SparkSession = ContextCreator.getSparkSession
 
   /*
   * Read kudu data with predicates to have multiple partitions
@@ -113,7 +106,7 @@ object Predicates{
 
     def conditionCreator(partitionColumnType: String): String = {
       partitionColumnType match {
-        case x if null == x || x.trim.isEmpty => ConditionCreator(sourceType)
+        case x if null == x || x.trim.isEmpty => conditionCreator(sourceType)
         case "timestamp" =>
           import java.text.SimpleDateFormat
           val dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
@@ -171,13 +164,13 @@ object Predicates{
 
     val resultSet =
       statement.executeQuery(
-        sql = s"SELECT max($column) AS max_value, min($column) AS min_value from $table WHERE $condition IS NOT NULL"
+         s"SELECT max($column) AS max_value, min($column) AS min_value from $table WHERE $condition IS NOT NULL"
       )
 
     var valueOption: Option[(String, String)] = None
     while(resultSet.next()){
       valueOption =
-        Some(resultSet.getString(columnLabel = "min_value"), resultSet.getString(columnLabel = "max_value"))
+        Some(resultSet.getString( "min_value"), resultSet.getString( "max_value"))
     }
     valueOption
   }
@@ -191,12 +184,12 @@ object Predicates{
 
   def getColumnTypes(table : String): Map[String,String] = {
     import scala.collection.mutable
-    val resultSet = statement.executeQuery(sql = s"DESCRIBE $table")
+    val resultSet = statement.executeQuery( s"DESCRIBE $table")
 
     val columnNames = mutable.Map.empty[String,String]
     while(resultSet.next()) {
-      val columnName : String = resultSet.getString(columnLabel = "name")
-      val colType : String = resultSet.getString(columnLabel = "type")
+      val columnName : String = resultSet.getString( "name")
+      val colType : String = resultSet.getString( "type")
       columnNames.put(columnName, colType)
     }
 
