@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
+
 import org.lera.etl.readers.{KuduReader, Reader}
 import org.lera.etl.util.Constants.fullLoadType
 
@@ -74,7 +75,13 @@ case class TimeConvert(sourceColumn: String,
 
 trait ContextCreator {
 
-  lazy val spark: SparkSession = SparkSession.builder().config("spark.master", "local").appName("etlapplication").getOrCreate()
+  lazy val spark: SparkSession = SparkSession
+    .builder()
+  //  .enableHiveSupport()
+    .config("spark.master", "local")
+    .appName("etlapplication")
+    .getOrCreate()
+
   lazy val getConf: RuntimeConfig = spark.conf
   lazy val sparkConf: RuntimeConfig = spark.conf
   val session: SparkSession = spark

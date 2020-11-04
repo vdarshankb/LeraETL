@@ -74,14 +74,26 @@ val stringNULL="null"
 
   val sparkAppName: String = "spark.app.name"
   val loggerLevel: String = "spark.log_level"
-  val impalaURL: String = "spark.impalaConnectionURL"
-  val jdbcDriver: String = "spark.impalaJDBCDriver"
-  val impalaUserName: String = "spark.impala_username"
-  val impalaPassword: String = "spark.impala_password"
+
+  //val impalaURL: String = "spark.impalaConnectionURL"
+  val hiveURL: String = "spark.hiveConnectionURL"
+
+  //val jdbcDriver: String = "spark.impalaJDBCDriver"
+  val hiveJDBCDriver: String = "spark.hiveJDBCDriver"
+
+  //val impalaUserName: String = "spark.impala_username"
+  //val impalaPassword: String = "spark.impala_password"
+
+  val hiveUserName: String = "spark.hive_username"
+  val hivePassword: String = "spark.hive_password"
+
   val driver: String = "driver"
   val kuduType: String = "Kudu"
   val hiveType: String = "Hive"
-  val stagingIdentifier: String = "_cdp"
+
+  //Staging table will be suffixed with _stg to the source table name
+  val stagingIdentifier: String = "_stg"
+
   val typeCast: String = "TypeCast"
   val status: String = "status"
   val inActive: String = "inactive"
