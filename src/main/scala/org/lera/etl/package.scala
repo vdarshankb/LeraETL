@@ -5,14 +5,14 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
-
 import org.lera.etl.readers.{KuduReader, Reader}
 import org.lera.etl.util.Constants.fullLoadType
+import org.lera.etl.util.Parser.logger
 
 package object etl extends ContextCreator {
 
-  val ibpAuditDatabase: String = getProperty("spark.audit_database")
-  val ibpConfigDatabase: String = getProperty("spark.audit_database")
+  val etlAuditDatabase: String = getProperty("spark.audit_database")
+  val etlConfigDatabase: String = getProperty("spark.audit_database")
 
   def getTableConfig(sourceSystem: String,
                      region: String,
@@ -73,21 +73,24 @@ case class TimeConvert(sourceColumn: String,
                        sourceTime: TimeUnit,
                        targetTime: TimeUnit)
 
-trait ContextCreator {
 
+
+trait ContextCreator {
   lazy val spark: SparkSession = SparkSession
     .builder()
-  //  .enableHiveSupport()
-    .config("spark.master", "local")
+    .master("local")
     .appName("etlapplication")
+    .enableHiveSupport()
     .getOrCreate()
+
+  spark.conf.set("hive.metastore.uris", "jdbc:hive2://10.22.1.66:2181,10.22.1.66:2181:2181,10.22.1.67:2181/default;password=spark;serviceDiscoveryMode=zooKeeper;user=spark;zooKeeperNamespace=hiveserver2")
 
   lazy val getConf: RuntimeConfig = spark.conf
   lazy val sparkConf: RuntimeConfig = spark.conf
+
   val session: SparkSession = spark
 
   def getProperty(propertyName: String): String = {
     spark.conf.get(propertyName)
   }
-
 }
