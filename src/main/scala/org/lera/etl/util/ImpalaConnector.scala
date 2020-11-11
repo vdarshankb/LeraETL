@@ -27,6 +27,8 @@ object ImpalaConnector extends ContextCreator{
   Class.forName(JDBCDriver).newInstance
 
   //val connectionURL: String = JDBC_URL_Generator(getProperty(impalaURL), userName,password)
+  //val connectionURL: String = JDBC_URL_Generator(getProperty(hiveURL), userName, password)
+
   val connectionURL: String = JDBC_URL_Generator(getProperty(hiveURL), userName, password)
 
   private val logger: Logger = Logger.getLogger(ImpalaConnector.getClass)

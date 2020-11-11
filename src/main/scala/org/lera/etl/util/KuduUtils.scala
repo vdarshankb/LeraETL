@@ -1,7 +1,9 @@
 package org.lera.etl.util
 
 import org.lera.etl.util.Constants.StringExpr
+
 import org.lera.etl.util.ImpalaConnector._
+
 import org.lera.etl.util.utils._
 import org.lera.{ContextCreator, TableConfig}
 
