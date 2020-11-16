@@ -1,25 +1,24 @@
 package org.lera.etl.util
 
 object Constants {
-val stringNULL="null"
+  val stringNULL="null"
+
   val fullLoadType: String = "full"
   val incremental: String = "incremental"
   val incr: String = "incr"
 
   val csv: String = "csv"
-  val sourceSystem: String = "source_system"
-  val sourceDataRegionName: String = "sourcedata_regionName"
+
 
 
   val partitionColumn: String = ""
   val numOfPartitions: String = ""
 
-  val sourceDB: String = "source_database"
-  val targetDB: String = "target_database"
+
 
   val configDB: String = "spark.config_database"
   val auditDB: String = "spark.audit_database"
-  val genericCfgTableName: String = "spark.generic_config"
+  val genericCfgTableName: String = "spark.config"
   val columnMappingCfgTableName: String = "spark.column_mapping_table"
   val auditCfgTableName: String = "spark.audit"
   val defaultValuesCfgTableName: String = "spark.default_values_table"
@@ -33,14 +32,24 @@ val stringNULL="null"
   val skipMissingSourceColumn: String =  "spark.skip_missing_source_column_source_"
 
   val concatChar: String = "_"
+
+  val sourceSystem: String = "source_system"
+  val sourceDataRegionName: String = "sourcedata_regionname"
+  val sourceType: String = "source_table_type"
+  val targetType: String =  "target_table_type"
+  val sourceDB: String = "source_database"
   val sourceTable: String = "source_table"
-  val targetTable: String  = "target_table"
   val filePath: String = "file_path"
-  val sourceType: String = "source_type"
-  val targetType: String =  "target_type"
+  val targetDB: String = "target_database"
+  val targetTable: String  = "target_table"
   val loadType: String = "load_type"
   val sourceIncrementColumn: String = "source_increment_column"
   val targetIncrementColumn: String = "target_increment_column"
+  //Added to include the message - Darshan
+  val message: String = "message"
+
+
+
   val sourceColumn: String = "source_column"
   val targetColumn: String = "target_column"
   val defaultValue: String = "default_value"
@@ -65,7 +74,6 @@ val stringNULL="null"
   val numberOfPartitions: String = ""
   val lowerBound: String = ""
   val upperBound: String = ""
-
 
   val aggMaxColumn: String = "agg_max_value"
 
@@ -136,12 +144,13 @@ val stringNULL="null"
 
   implicit
   class StringImplicits(consValue: String) {
+
     def ignoreCaseInSQL: String = {
       val equalReplacer: String = "))=LOWER(TRIM("
       val notEqualReplacer: String = "))!=LOWER(TRIM("
       val sqlAndReplacer: String = ")) AND LOWER(TRIM("
       val sqlOrReplacer: String = ")) OR LOWER(TRIM("
-      s"LOWER(TRIM($consValue))".replace(StringExpr.equal, equalReplacer)
+      s"LOWER(TRIM(${consValue.trim}))".replace(StringExpr.equal, equalReplacer)
         .replace(StringExpr.notEqual, notEqualReplacer)
         .replace(sqlAND, sqlAndReplacer).replace(sqlOR, sqlOrReplacer)
     }

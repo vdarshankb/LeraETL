@@ -8,10 +8,12 @@ import org.lera.etl.util.Constants
 import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Writers.writerType
 import org.lera.etl.util.utils._
+
 object HiveReader extends Reader{
   
   private val logger : Logger = Logger.getLogger(HiveReader.getClass)
-  /* 
+
+  /*
    * 
    * Read data from source
    * @Param properties file
@@ -114,8 +116,7 @@ object HiveReader extends Reader{
     tableConf : TableConfig    
   ) : Array[String] = {
     
-    val sourceColumns : Array[String] = readHiveTable(
-    tableName = s"${tableConf.source_database}.${tableConf.source_table}"    
+    val sourceColumns : Array[String] = readHiveTable(tableName = s"${tableConf.source_database}.${tableConf.source_table}"
     ).columns
     
     val sourceSystems : Array[String] = 

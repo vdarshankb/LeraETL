@@ -15,21 +15,17 @@ object ImpalaConnector extends ContextCreator{
   lazy val connection: Connection = DriverManager.getConnection(connectionURL)
   lazy val statement: Statement = connection.createStatement()
 
- /* val userName : String = getProperty(impalaUserName)
-  val password : String = getProperty(impalaPassword)
-  val JDBCDriver : String = getProperty(jdbcDriver)
-*/
-
   val userName : String = getProperty(hiveUserName)
   val password : String = getProperty(hivePassword)
   val JDBCDriver : String = getProperty(hiveJDBCDriver)
 
-  Class.forName(JDBCDriver).newInstance
+  //uncomment the below when kudu is used
+  //Class.forName(JDBCDriver).newInstance
 
-  //val connectionURL: String = JDBC_URL_Generator(getProperty(impalaURL), userName,password)
-  //val connectionURL: String = JDBC_URL_Generator(getProperty(hiveURL), userName, password)
+  // val connectionURL: String = JDBC_URL_Generator(getProperty(hiveURL), userName, password)
 
-  val connectionURL: String = JDBC_URL_Generator(getProperty(hiveURL), userName, password)
+  //Change the below when kudu is used
+ val connectionURL: String = "connectionURL"
 
   private val logger: Logger = Logger.getLogger(ImpalaConnector.getClass)
 
@@ -38,11 +34,11 @@ object ImpalaConnector extends ContextCreator{
   *
   */
 
-  def getImpalaProperty: Properties = {
+/*  def getImpalaProperty: Properties = {
     val prob = new Properties
     prob.setProperty(driver,JDBCDriver)
     prob
-  }
+  }*/
 
   /*
   *Generates delete table query to delete data from kudu table
@@ -55,7 +51,6 @@ object ImpalaConnector extends ContextCreator{
     val cond =
       if(whereCond.isEmpty) StringExpr.empty
       else s"where $whereCond"
-
     s"DELETE $tableName $cond;"
   }
 
@@ -93,7 +88,8 @@ object ImpalaConnector extends ContextCreator{
     Try {
       queries.foreach(query => {
         println(s"Executing query $query")
-        statement.execute(query)
+        //statement.execute(query)
+        spark.sql(query)
       })
     } match {
       case Success(_) => true

@@ -15,7 +15,7 @@ object KuduUtils extends ContextCreator{
   import org.apache.spark.sql.DataFrame
   import scala.util.Try
 
-  lazy val defaultNoOfPartitions : Int = getConf
+  lazy val defaultNoOfPartitions : Int = spark.conf
     .getOption(key = "spark.kudu_default_partitions")
     .getOrElse(200.toString)
     .toInt
@@ -136,10 +136,23 @@ object KuduUtils extends ContextCreator{
     "upperBound"      -> partitionConfig.upper_bound.toString,
     "lowerBound"      -> partitionConfig.lower_bound.toString
     )
-
     readKuduTable(query,partitionDetails)
-
   }
+
+
+  /*Read Hive table data - Darshan
+   *
+   * @param query select query
+   * @param partitionConfig partition config
+   *
+   * @return
+   *  */
+
+  def readHiveWithCondition(tableName : String, where : Any): DataFrame =
+    {
+      logger.info(s"Inside the readHiveWithCondition and will now invoke readHiveTableWithColumns($tableName, $where)")
+      readHiveTableWithColumns(tableName, StringExpr.empty, where.toString)
+    }
 
   /*Read Kudu table data with partition information
    *
@@ -151,6 +164,30 @@ object KuduUtils extends ContextCreator{
 
   def readKuduWithCondition(tableName : String, where : Any) : DataFrame =
     readKuduTableWithColumns(tableName, StringExpr.empty, where.toString)
+
+  /*
+ * Read Hive table using conditions - Darshan
+ *
+ * @param tableName tableName
+ * @param where condition
+ * @return
+ * */
+
+  def readHiveTableWithColumns(tableName : String,
+                               selectColumns : String = "",
+                               whereClause : String = ""): DataFrame = {
+
+    val columns   = if(selectColumns.isEmpty) "*" else selectColumns
+    val whereCond = if(whereClause.isEmpty) "" else s"WHERE $whereClause"
+
+    //commented the below line as we were getting extra table name after the SELECT query, which
+    // was causing trouble with hive
+    //val query = s"(SELECT $columns FROM $tableName $whereCond)${tableName.split("\\.")(1)}"
+
+    val query = s"(SELECT $columns FROM $tableName $whereCond)"
+    logger.info(s"Reading hive table with columns: $query")
+    readHiveTableWithQuery(query)
+  }
 
   /*
    * Read Kudu table using conditions
@@ -204,7 +241,7 @@ object KuduUtils extends ContextCreator{
 
   def isHiveIntermediateEnabled(sourceSystem : String) : Boolean = {
 
-    val sourceSystems = getConf
+    val sourceSystems = spark.conf
       .getOption(key = "spark.read_kudu_using_hive_source_systems")
       .getOrElse(StringExpr.empty)
 
@@ -247,6 +284,19 @@ object KuduUtils extends ContextCreator{
   }
 
   /*
+  * Read Kudu table using jdbc connection and convert them into data set using spark session
+  *
+  * @param tableName Kudu table name or query
+  * @return
+  * */
+
+  def readHiveTableWithQuery(query : String): DataFrame = {
+    logger.info(s"Inside readHiveTableWithQuery method and Executing $query using spark sql")
+    spark.sql(query)
+  }
+
+
+  /*
    * Read Kudu table using jdbc connection and convert them into data set using spark session
    *
    * @param tableName Kudu table name or query
@@ -284,8 +334,8 @@ object KuduUtils extends ContextCreator{
           logger.error(
           s"Read data from Kudu table failed due to ${exception.getMessage}"
           )
-
           throw exception
       }
     }
+
 }

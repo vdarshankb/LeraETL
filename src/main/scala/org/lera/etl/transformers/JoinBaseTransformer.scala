@@ -2,6 +2,7 @@ package org.lera.etl.transformers
 
 import org.apache.spark.sql.{Column, DataFrame}
 import org.apache.spark.sql.functions._
+
 trait JoinBaseTransformer extends BaseTransformer {
 
   val getDropColumns: DataFrame => DataFrame => Seq[Column] = sourceDf =>

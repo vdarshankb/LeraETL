@@ -31,19 +31,20 @@ object LeraETLMain extends ContextCreator {
       logger.error(
         "Source System and Region, minimum two arguments are required."
       )
-
       throw new Exception("Incorrect arguments exception")
     }
 
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) =
-      getTableConfig(args)
+    val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) = getTableConfig(args)
 
-    val ingestionThread: Future[Unit] = Future(startIngestionProcess(null,null))
+    logger.info(s"Source System provided is $sourceSystem")
+    logger.info(s"Arguments provided are ${args.seq.toString()}")
+    logger.info(s"Processing for $sourceSystem and for the ${tableConfigs.toString()}")
 
-    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
+    val ingestionThread: Future[Unit] = Future(startIngestionProcess(sourceSystem, tableConfigs))
 
+//    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
   }
 
   def ingestionMonitor(ingestionThread: Future[Unit],
@@ -91,7 +92,7 @@ object LeraETLMain extends ContextCreator {
         timeTaken = timeTaken + notifyInterval
         val message =
           s"Running more than ${s"${getHours()} ${getMinutes()}".trim}"
-        sendEmailNotification(config, sourceSystem, message, runTime())
+      //  sendEmailNotification(config, sourceSystem, message, runTime())
       }
 
       if (diffMinutes >= maxRunTime) {
@@ -101,11 +102,8 @@ object LeraETLMain extends ContextCreator {
               conf.message + s"\n Job killed because job was running more than cut off time"
           )
         )
-        sendEmailNotification(
-          updatedConf,
-          sourceSystem,
-          message = "killed",
-          runTime()
+
+        sendEmailNotification(updatedConf,sourceSystem, message = "killed",runTime()
         )
 
         throw new ETLException(
@@ -114,8 +112,12 @@ object LeraETLMain extends ContextCreator {
 
       }
     }
+
+
+
     logger.info(s"Fatal time taken for execution: $diffMinutes minutes")
-    val failedJobs: Array[TableRunInfo] =null
+    val failedJobs: Array[TableRunInfo] = null
+
     // Close the spark session as job completed
 
     if (failedJobs.isEmpty) {
@@ -151,16 +153,11 @@ object LeraETLMain extends ContextCreator {
   }
 
   def getControl(sourceSystem: String): (Int, Int) = {
-    val tableName =
-      s"$etlAuditDatabase.${getProperty("spark.job_exec_control_table")}"
-    val controlDf = KuduUtils
-      .readKuduWithCondition(
-        tableName,
-        where = s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
+    val tableName = s"$etlAuditDatabase.${getProperty("spark.job_exec_control_table")}"
+    val controlDf = KuduUtils.readKuduWithCondition(tableName, s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
       )
 
     if (controlDf.isEmpty) {
-
       val defaultNotificationTime: Int =
         Try(getProperty("spark.default_notification_interval_time"))
           .getOrElse("30")
@@ -191,7 +188,7 @@ object LeraETLMain extends ContextCreator {
                                     message: String,
                                     runTime: String): Unit = {
 
-    val recipients: String = getProperty("spark.notification_mail_list")
+ /*   val recipients: String = getProperty("spark.notification_mail_list")
     val subject: String =
       s"${getProperty("spark.notification_mail_subject")} for $sourceSystem is "
 
@@ -199,7 +196,7 @@ object LeraETLMain extends ContextCreator {
 
     val completeSubject: String = subject + message
 
-/* Remove ths comment when you want to send the email notifications
+ //Remove ths comment when you want to send the email notifications
 
     EmailSMTPClient
       .sendMail(
@@ -208,6 +205,7 @@ object LeraETLMain extends ContextCreator {
         recipients
       )
 */
+
   }
 
   def getTableConfig(args: Array[String]): (String, ParSeq[TableConfig]) = {
@@ -219,17 +217,22 @@ object LeraETLMain extends ContextCreator {
     Try {
 
       val loadType: String = Try(args(2)).getOrElse(null)
+
+      //The below links of code is to load the data from the table provided as the fourth argume.
+      //In this project, this fourth arugument is not considered yet
+
       val tableNames: Array[String] =
         Try(args(3))
           .getOrElse(StringExpr.empty)
           .split(StringExpr.comma)
           .filterNot(_.isEmpty)
 
-      (
-        sourceSystem,
-        getTableConfigs(sourceSystem, region, loadType, tableNames)
-      )
-    } match {
+      logger.info(s"Inside getTableConfig method: sourceSystem = $sourceSystem, region = $region, loadType = $loadType, tableNames = ${tableNames.seq.toString()} ")
+
+      (sourceSystem, getTableConfigs(sourceSystem, region, loadType, tableNames) )
+
+    }
+    match {
       case Success(value) => value
       case Failure(exception) =>
         val error = if (exception != null & exception.getMessage.nonEmpty) {
@@ -256,10 +259,12 @@ object LeraETLMain extends ContextCreator {
 
   def startIngestionProcess(sourceSystem: String,
                             tableConfigs: ParSeq[TableConfig]): Unit = {
-    logger.info(
-      "Database and table information are parsed from the config table"
-    )
+
     import org.lera.etl.util.Enums.RunStatus._
+
+    logger.info(
+      s"Database and table information are parsed from the config table ${tableConfigs.toString()}"
+    )
 
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {

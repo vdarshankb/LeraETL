@@ -6,11 +6,12 @@ import org.lera.{ContextCreator, TableConfig}
 import org.lera.etl.Writers._
 import org.lera.etl.readers._
 import org.lera.etl.transformers._
-import org.lera.etl.util.Constants.StringExpr
+import org.lera.etl.util.Constants.{StringExpr, StringImplicits, incremental}
 import org.lera.etl.util.Enums.{LoaderType, Transformers, Writers}
+import org.lera.etl.util.KuduUtils.spark
 import org.lera.etl.util.utils._
 
-import scala.collection.parallel.ParSeq
+import scala.collection.parallel.{MIN_FOR_COPY, ParSeq}
 
 
 
@@ -31,7 +32,6 @@ case class PartitionTableConfig(source_system:String,
  * */
 
 object Parser extends ContextCreator {
-  
 
   implicit val dailyInvEncoder : Encoder[TableConfig] =
     Encoders.product[TableConfig]
@@ -48,9 +48,8 @@ object Parser extends ContextCreator {
    //List all the transformers required for each source system
    //The transformers can be provided in properties file as comma separated
   // make changes in below blocks of code
-      
-      
-  val transformers : Seq[String] = sparkConf
+
+  val transformers : Seq[String] = spark.conf
     .getOption(s"spark.${sourceSystem.toLowerCase}_transformers")
     .getOrElse({
       logger.warn(
@@ -107,7 +106,6 @@ object Parser extends ContextCreator {
       case Filter              => FilterTransformer
       case Delete              => DeleteTransformer
       case TypeCast            => TypeCastTransformer
-
     }
   }
   
@@ -121,43 +119,55 @@ object Parser extends ContextCreator {
   
   def getTableConfigs(sourceSystem:String,
                       region : String,
-                      loadTypeArgu: String,
+                      loadTypeArg: String,
                       tableName : Seq[String]) : ParSeq[TableConfig] = {
-    logger.info(s"Parsing table config for source system : $sourceSystem")
+
+    logger.info(s"Inside the getTableConfigs method.")
     logger.info(s"Transformations and data ingestion for all the tables under the system: $sourceSystem")
     
     val filterCondition : String =
-      s"${Constants.sourceSystem}='$sourceSystem' AND ${Constants.sourceDataRegionName}='$region'"
-      
-    val tableConfigs : ParSeq[TableConfig] = {
-        val configs : ParSeq[TableConfig] = null
-        
+      s"${Constants.sourceSystem} = '$sourceSystem' AND ${Constants.sourceDataRegionName}='$region'".ignoreCaseInSQL
+
+    logger.info(s"Filter condition is set and now it will invoke ConfigReader.configLoader($filterCondition)")
+
+    val tableConfigs: ParSeq[TableConfig] = {
+
+        val configs: ParSeq[TableConfig] = ConfigReader.configLoader(filterCondition).par
+
+      logger.info(s"After configLoader, return value of configs is ${configs.toString()}")
+      logger.info(s"Table Name is empty or not: ${tableName.isEmpty}")
+
         if(tableName.isEmpty) configs
         else configs.filter(conf => tableName.contains(conf.target_table))
-      }
-      
+
+    }
+
+    logger.info(s"Content of table Configs after the configLoader is: $tableConfigs")
+
     if(tableConfigs.isEmpty){
       throw new Exception(
       s"Related entries are not available for $sourceSystem in the config table"    
       )
     }
 
-    if(null != loadTypeArgu){
+    logger.info(s"Load Type Argument is: $loadTypeArg")
+
+    if(null != loadTypeArg){
       val loaderType : String =
-        LoaderType.fromString(loadType = loadTypeArgu.toLowerCase) match {
+        LoaderType.fromString(loadType = loadTypeArg.toLowerCase) match {
         case Some(outValue) => outValue.toString.toLowerCase()
         case _ =>
           val loaderUpdate : ParSeq[TableConfig] =
-            tableConfigs.map(ins => ins.copy(load_type = loadTypeArgu))
+            tableConfigs.map(ins => ins.copy(load_type = loadTypeArg))
           val updatedTableConf : ParSeq[TableConfig] = loaderUpdate.map(
           msg => 
             msg.copy(
-            message = s"Invalid load type provided :: $loadTypeArgu"    
+            message = s"Invalid load type provided :: $loadTypeArg"
             )
           )
           import Enums.RunStatus.FAILED
           auditUpdate(updatedTableConf.head, FAILED)
-          throw new Exception(s"Invalid load type provided $loadTypeArgu")
+          throw new Exception(s"Invalid load type provided $loadTypeArg")
       }
       logger.info(s"$loaderType load type is in progress")
       tableConfigs.map(ins => ins.copy(load_type = loaderType))
@@ -173,7 +183,11 @@ object Parser extends ContextCreator {
 
 
   import Enums.Readers
+
   def getReaderInstance(readType:String): Reader = {
+
+    logger.info(s"Read Type is: $readType")
+
     val readerType : Enums.Readers.Value = Readers
       .fromString(readerType = readType)
       .getOrElse(throw new Exception(s"Unknown reader type : $readType"))
@@ -184,6 +198,7 @@ object Parser extends ContextCreator {
       case EXCEL | CSV | JSON | TEXT => FlatFileReader
       case SQLKUDU                   => SQLKuduReader
       case HIVE                      => HiveReader
+      case RESTAPI                   => APIDataReader
     }
   }
   

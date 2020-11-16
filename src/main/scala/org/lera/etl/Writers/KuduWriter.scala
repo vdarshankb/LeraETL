@@ -7,6 +7,8 @@ import org.lera.etl.util.Constants
 import org.lera.etl.util.Constants.StringExpr
 import org.lera.etl.util.utils._
 import org.lera.etl.util.ImpalaConnector._
+import org.lera.ContextCreator
+
 import Constants._
 
 import scala.collection.parallel.ParSeq

@@ -7,6 +7,13 @@ import org.apache.spark.sql.functions.{col, explode}
 import org.apache.spark.sql.types.{ArrayType, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+
+
+
+object JsonReader {
+
+}
+
 /*
 
 

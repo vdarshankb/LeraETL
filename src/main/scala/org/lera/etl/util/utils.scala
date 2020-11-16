@@ -12,6 +12,7 @@ import org.lera.etl.util.Constants.StringExpr._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
 import org.lera.etl.util.Enums._
+import org.lera.etl.util.KuduUtils.spark
 import org.lera.{ContextCreator, TableConfig}
 
 import scala.collection.GenSeq
@@ -66,6 +67,7 @@ object utils extends ContextCreator{
   }
   
   lazy val startTime : Timestamp = now
+
   val configDatabase : String = getProperty(configDB)
   val configTable : String = getProperty(genericCfgTableName)
   val auditDatabase : String = getProperty(auditDB)
@@ -81,12 +83,12 @@ object utils extends ContextCreator{
       .fromString(writerType = tableType)
       .getOrElse(throw new ETLException("unknown target type"))
 
-  val getTableType : String => Writers.writerType = tableType =>
+  val getTableType: String => Writers.writerType = tableType =>
     Writers
       .fromString(writerType = tableType)
       .getOrElse(throw new ETLException("unknown target type"))
 
-  val auditUpdate : (TableConfig,RunStatus) => Unit = (config,runState) => {
+  val auditUpdate: (TableConfig,RunStatus) => Unit = (config,runState) => {
     leraAuditTableUpdate(
     tableRunInfo = TableRunInfo(
     sourceSystem = config.source_system,
@@ -115,7 +117,7 @@ object utils extends ContextCreator{
   }
 
   def isSourceEnabled(property : String, source : String) : Boolean =
-    getConf
+    spark.conf
       .getOption(key = property)
       .getOrElse(StringExpr.empty)
       .trim
@@ -124,7 +126,7 @@ object utils extends ContextCreator{
       .contains(source.toLowerCase)
 
   def isSourceBasedLoad(sourceSystem : String) : Boolean =
-    getConf
+    spark.conf
       .getOption("")
       .getOrElse(empty)
       .trim
@@ -152,8 +154,17 @@ object utils extends ContextCreator{
         .replace( Constants.password,  password)
     }
 
-  def readHiveTable(tableName : String) : DataFrame =
+  /*
+  * Read the hive table and get the dataframe
+  *
+  * @param query
+  * @return Dataframe
+  * */
+
+  def readHiveTable(tableName: String) : DataFrame = {
+    logger.info(s"Read Hive table using query: $tableName")
     spark.table(tableName)
+  }
 
   /*
    * Get count of CSV files in HDFS location
@@ -161,9 +172,8 @@ object utils extends ContextCreator{
    * @param hdfsFileLocation File location
    * @return Number of files
    * */
-
   def getNumberOfFiles(hdfsFileLocation : String) : Int = {
-    val fs : FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+    val fs: FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
     val filepath : String = hdfsFileLocation.replace(
          hdfsFileLocation.split( StringExpr.slash).last,
          StringExpr.empty
@@ -205,15 +215,27 @@ object utils extends ContextCreator{
        case RUNNING =>
          s"INSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','','$RUNNING','');"
 
+       // For Kudu audit table the upsert will work
+       //case SUCCESS =>
+       //  s"UPDATE $auditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
+
+         //Change the syntax of the INSERT statement
        case SUCCESS =>
-         s"UPDATE $auditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
+         s"INSERT $auditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
 
        /*case TableRunInfo(_,_,table,_,FAILED, error) =>
         * s"UPDATE auditTableName SET run_status = '$FAILED', end_time = '$now', message = '$error' WHERE table_name = '$table' AND run_status = 'RUNNING';"
         * */
 
-       case FAILED =>
+       // For Kudu audit table the upsert will work
+       /*case FAILED =>
          s"UPSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
+*/
+
+         //Change the correct syntax for INSERT
+       case FAILED =>
+         s"INSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
+
      }
 
 //     executeQuery(queries = query)
@@ -529,7 +551,6 @@ object utils extends ContextCreator{
     import org.lera.etl.util.Constants.stringNULL
 
     TableConfig( stringNULL,
-      stringNULL,
       stringNULL,
       stringNULL,
       stringNULL,

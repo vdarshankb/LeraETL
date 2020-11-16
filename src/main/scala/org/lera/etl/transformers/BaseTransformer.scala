@@ -20,6 +20,8 @@ import org.lera.{ContextCreator, DateTimeConvert, TableConfig, TimeConvert}
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
+
+
 trait BaseTransformer extends ContextCreator {
   private val logger: Logger = Logger.getLogger(this.getClass)
   val fiscalYearUDF: UserDefinedFunction = udf(
@@ -40,6 +42,7 @@ trait BaseTransformer extends ContextCreator {
       })
     }
   )
+
   val targetTableSchema: TableConfig => StructType = tableConf => {
 
     val targetTable = s"${tableConf.target_database}.${tableConf.target_table}"
