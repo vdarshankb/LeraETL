@@ -10,6 +10,7 @@ import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Readers._
 import org.lera.etl.util.Enums._
 import org.lera.etl.util.KuduUtils._
+import org.lera.ContextCreator.spark
 
 object FlatFileReader extends Reader {
 

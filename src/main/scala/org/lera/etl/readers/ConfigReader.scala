@@ -69,6 +69,7 @@ object ConfigReader {
     val localTableConfig: Seq[TableConfig] = configCreator(configs.collect())
 
     logger.info(s"Return value from the configCreator method: ${localTableConfig.toString()}")
+
     localTableConfig
   }
 
@@ -83,36 +84,47 @@ object ConfigReader {
         (conf.property_name.trim, conf.property_value.trim)
       }).toMap).toSeq
 
+    //Get the column names or the attributes from the TableConfig case class
     val columns:List[String] = classAccessors[TableConfig]
 
     logger.info(s"Contents of the tableConf object: ${tableConf.toString()}")
-
     logger.info(s"Values in the columns object: ${columns.toString()}")
 
-    tableConf.map(conf => {
-      val properties: Map[String, String] =
-        columns.map(column => (column, conf.getOrElse(column, null))).toMap
+    val tempTableConf: Seq[TableConfig] =  tableConf.map(
+          conf => {
+          val properties: Map[String, String] =
 
-      //val requiredProperty: String => String = propertyCheck(properties)(_, true)
-      val requiredProperty: String => String = propertyCheck(properties)(_, false)
-      val optionalProperty: String => String = propertyCheck(properties)(_, false)
+            columns.map(column => (column, conf.getOrElse(column, null))).toMap
 
-      TableConfig(
-        requiredProperty(sourceSystem.trim),
-        requiredProperty(sourceDataRegionName.trim),
-        requiredProperty(sourceType.trim),
-        requiredProperty(targetType.trim),
-        requiredProperty(sourceDB.trim),
-        requiredProperty(sourceTable.trim),
-        requiredProperty(filePath.trim),
-        requiredProperty(targetDB.trim),
-        requiredProperty(targetTable.trim),
-        requiredProperty(loadType.trim),
-        optionalProperty(sourceIncrementColumn.trim),
-        optionalProperty(targetIncrementColumn.trim),
-        optionalProperty(message)
-      )
-    } )
+            println("Printing both columns and conf contents" , columns, properties)
+
+          val requiredProperty: String => String = propertyCheck(properties)(_, true)
+          val optionalProperty: String => String = propertyCheck(properties)(_, false)
+
+          TableConfig(
+            requiredProperty(sourceSystem),
+            requiredProperty(sourceDataRegionName),
+            requiredProperty(sourceType),
+            requiredProperty(targetType),
+            requiredProperty(sourceDB),
+            requiredProperty(sourceTable),
+            requiredProperty(filePath),
+            requiredProperty(targetDB),
+            requiredProperty(targetTable),
+            requiredProperty(loadType),
+            optionalProperty(sourceIncrementColumn),
+            optionalProperty(targetIncrementColumn)
+          )
+        }
+        )
+
+    logger.info(s"Table Config source database: ${tempTableConf.head.source_database}")
+    logger.info(s"Table Config target database: ${tempTableConf.head.target_database}")
+    logger.info(s"Table Config source_table: ${tempTableConf.head.source_table}")
+    logger.info(s"Table Config Source System Contents: ${tempTableConf.head.source_system}")
+
+    tempTableConf
+
   }
 
   def classAccessors[T: TypeTag]: List[String] =

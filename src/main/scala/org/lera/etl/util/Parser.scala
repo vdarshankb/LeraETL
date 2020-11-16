@@ -2,13 +2,14 @@ package org.lera.etl.util
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{Encoder, Encoders}
+import org.lera.ContextCreator.spark
 import org.lera.{ContextCreator, TableConfig}
 import org.lera.etl.Writers._
 import org.lera.etl.readers._
 import org.lera.etl.transformers._
 import org.lera.etl.util.Constants.{StringExpr, StringImplicits, incremental}
 import org.lera.etl.util.Enums.{LoaderType, Transformers, Writers}
-import org.lera.etl.util.KuduUtils.spark
+import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.utils._
 
 import scala.collection.parallel.{MIN_FOR_COPY, ParSeq}
@@ -31,7 +32,7 @@ case class PartitionTableConfig(source_system:String,
  * Parser used to parse the table config properties from kudu meta data table
  * */
 
-object Parser extends ContextCreator {
+object Parser {
 
   implicit val dailyInvEncoder : Encoder[TableConfig] =
     Encoders.product[TableConfig]
@@ -120,7 +121,7 @@ object Parser extends ContextCreator {
   def getTableConfigs(sourceSystem:String,
                       region : String,
                       loadTypeArg: String,
-                      tableName : Seq[String]) : ParSeq[TableConfig] = {
+                      tableName : Seq[String]): ParSeq[TableConfig] = {
 
     logger.info(s"Inside the getTableConfigs method.")
     logger.info(s"Transformations and data ingestion for all the tables under the system: $sourceSystem")
@@ -169,7 +170,8 @@ object Parser extends ContextCreator {
           auditUpdate(updatedTableConf.head, FAILED)
           throw new Exception(s"Invalid load type provided $loadTypeArg")
       }
-      logger.info(s"$loaderType load type is in progress")
+
+      logger.info(s"$loaderType load type is in progress for source system: ${tableConfigs.head.source_system}")
       tableConfigs.map(ins => ins.copy(load_type = loaderType))
     } else tableConfigs
   }

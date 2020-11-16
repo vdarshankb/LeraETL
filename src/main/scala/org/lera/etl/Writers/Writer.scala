@@ -13,7 +13,7 @@ import scala.collection.parallel.ParSeq
  *
  *  */
 
-trait Writer extends ContextCreator{
+trait Writer {
 
   /*
    * Write datasets into target tables or file system

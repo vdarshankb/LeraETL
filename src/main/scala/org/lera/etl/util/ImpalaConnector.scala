@@ -7,10 +7,12 @@ import org.lera.etl.util.utils.JDBC_URL_Generator
 import scala.util.{Failure, Success}
 import org.apache.log4j.Logger
 import org.lera.ContextCreator
+import org.lera.ContextCreator.{getProperty, spark}
 import org.lera.etl.util.Constants._
+
 import scala.util.Try
 
-object ImpalaConnector extends ContextCreator{
+object ImpalaConnector {
 
   lazy val connection: Connection = DriverManager.getConnection(connectionURL)
   lazy val statement: Statement = connection.createStatement()

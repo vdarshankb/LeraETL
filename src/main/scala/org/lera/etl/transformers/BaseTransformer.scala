@@ -22,7 +22,7 @@ import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
 
 
-trait BaseTransformer extends ContextCreator {
+trait BaseTransformer {
   private val logger: Logger = Logger.getLogger(this.getClass)
   val fiscalYearUDF: UserDefinedFunction = udf(
     (value: String, sourceFormat: String) => {

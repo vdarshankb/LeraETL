@@ -1,13 +1,15 @@
 package org.lera.etl.util
 import java.util.Properties
 
+
 import org.apache.spark.sql.DataFrame
-import org.lera.ContextCreator
+import org.lera.ContextCreator.spark
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.ImpalaConnector.{JDBCDriver, connectionURL, statement}
+
 import scala.util.Try
 
-object Predicates extends ContextCreator {
+object Predicates {
 
   /*
   * Read kudu data with predicates to have multiple partitions
@@ -35,8 +37,7 @@ object Predicates extends ContextCreator {
       })
       else conditionArray
 
-    spark.read.jdbc(connectionURL, query, finalCondArray, getJDBCProperties
-    )
+    spark.read.jdbc(connectionURL, query, finalCondArray, getJDBCProperties )
   }
 
   /*

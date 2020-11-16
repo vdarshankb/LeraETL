@@ -2,8 +2,10 @@ package org.lera.etl.Writers
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.lera.ContextCreator.session
 import org.lera.TableConfig
 import org.lera.etl.util.Constants
+import org.lera.ContextCreator.spark
 
 import scala.util.{Success, Try}
 import org.lera.etl.util.utils._
@@ -62,8 +64,11 @@ object HiveWriter extends Writer {
         }
 
       }
-val finalTargetTableName=s"${tableConf.target_database}.${tableConf.target_table}"
+
+      val finalTargetTableName=s"${tableConf.target_database}.${tableConf.target_table}"
+
       validateTableMetadata(finalTargetTableName)
+
       logger.info(
         s"Data loaded successfully into target Hive table $finalTargetTableName"
       )

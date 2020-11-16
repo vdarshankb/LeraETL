@@ -9,13 +9,13 @@ import org.lera.etl.util.utils.JDBC_URL_Generator
 import org.apache.spark.sql.functions._
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
-import org.lera.etl.getProperty
+import org.lera.ContextCreator.getProperty
 import org.lera.etl.readers.{KuduReader, Reader}
 import org.lera.etl.util.Constants.fullLoadType
 import org.lera.etl.util.ImpalaConnector
 import org.lera.etl.util.Parser.logger
 
-package object etl extends ContextCreator {
+package object etl {
 
   val etlAuditDatabase: String = getProperty("spark.audit_database")
   val etlConfigDatabase: String = getProperty("spark.config_database")
@@ -63,7 +63,7 @@ case class TableConfig(   source_system: String,
                           load_type: String,
                           source_increment_column: String,
                           target_increment_column: String,
-                          message: String
+                          message: String = ""
                         ) extends Properties
 
 case class PartitionTableConfig(tableName: String)
@@ -81,9 +81,10 @@ case class TimeConvert(sourceColumn: String,
 
 
 
-trait ContextCreator {
+//trait ContextCreator {
 
-  lazy val spark: SparkSession = SparkSession
+object ContextCreator {
+  val spark: SparkSession = SparkSession
     .builder()
     .master("local")
     .appName("etlapplication")
@@ -109,7 +110,7 @@ trait ContextCreator {
   spark.conf.set("spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive","true")
 */
 
-  spark.sql("SELECT * from default.generic_config").show(2)
+//  spark.sql("SELECT * from default.generic_config").show(2)
 
   println("Reading properties file..")
 

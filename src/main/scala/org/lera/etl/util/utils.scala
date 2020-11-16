@@ -8,11 +8,12 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.{col, trim}
 import org.apache.spark.sql.types.{DataType, StringType}
 import org.apache.spark.sql.{DataFrame, Encoder, Row}
+import org.lera.ContextCreator.getProperty
 import org.lera.etl.util.Constants.StringExpr._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
 import org.lera.etl.util.Enums._
-import org.lera.etl.util.KuduUtils.spark
+import org.lera.ContextCreator.spark
 import org.lera.{ContextCreator, TableConfig}
 
 import scala.collection.GenSeq
@@ -22,7 +23,7 @@ import scala.util.{Failure, Success, Try}
  *  Utility methods and classes
  *  **/
 
-object utils extends ContextCreator{
+object utils {
   
   lazy val columnMappingConfigTableName : String = {
     

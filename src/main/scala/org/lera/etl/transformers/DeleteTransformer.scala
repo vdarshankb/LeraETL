@@ -5,6 +5,7 @@ import org.apache.spark.sql.DataFrame
 import org.lera.TableConfig
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.utils._
+import org.lera.ContextCreator.spark
 
 import scala.collection.parallel.ParSeq
 object DeleteTransformer extends FilterBaseTransformer {

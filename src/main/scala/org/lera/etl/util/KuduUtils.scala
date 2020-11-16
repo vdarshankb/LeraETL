@@ -6,10 +6,12 @@ import org.lera.etl.util.ImpalaConnector._
 
 import org.lera.etl.util.utils._
 import org.lera.{ContextCreator, TableConfig}
+import org.lera.ContextCreator.spark
+import org.lera.ContextCreator.getProperty
 
 import scala.util.{Failure, Success}
 
-object KuduUtils extends ContextCreator{
+object KuduUtils {
 
   import org.apache.log4j.Logger
   import org.apache.spark.sql.DataFrame

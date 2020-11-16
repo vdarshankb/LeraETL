@@ -5,6 +5,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.functions.{max, min}
 import org.apache.spark.sql.types.{DataType, LongType, StringType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Row}
+import org.lera.ContextCreator.spark
 import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Writers
 import org.lera.etl.util.Enums.Writers._
@@ -12,7 +13,7 @@ import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.utils._
 import org.lera.{ContextCreator, TableConfig}
 
-trait Reader extends ContextCreator {
+trait Reader{
 
   /*
    *
