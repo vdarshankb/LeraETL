@@ -24,7 +24,7 @@ object HiveReader extends Reader{
   override def readData(conf : TableConfig) : (TableConfig,DataFrame) = {
     
     val tableName = s"${conf.source_database}.${conf.source_table}"
-    logger.info(s"Reading data from Hive table $tableName")
+    logger.info(s"Reading data from Hive table $tableName with load type ${conf.load_type.toLowerCase}" )
     
     val dataFrame : DataFrame = conf.load_type.toLowerCase match {
       case Constants.incremental | Constants.incr => 
@@ -32,6 +32,7 @@ object HiveReader extends Reader{
         conf    
         )
         logger.info(s"Incremental condition is $incrementalCondition")
+
         val sourceDataFrame : Dataset[Row] = readHiveTable(tableName)
         
         if(incrementalCondition.nonEmpty)

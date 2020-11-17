@@ -10,7 +10,10 @@ import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Readers._
 import org.lera.etl.util.Enums._
 import org.lera.etl.util.KuduUtils._
-import org.lera.ContextCreator.spark
+
+import org.lera.connectionContextCreator.getSparkSession
+
+//import org.lera.ContextCreator.spark
 
 object FlatFileReader extends Reader {
 
@@ -35,9 +38,9 @@ object FlatFileReader extends Reader {
           ).schema
           readExcel(tableConf.file_path, targetSchema)
 
-        case JSON => spark.read.json(tableConf.file_path)
+        case JSON => getSparkSession.read.json(tableConf.file_path)
         case CSV  => readCSV(tableConf.file_path, tableConf.source_system)
-        case _    => spark.read.textFile(tableConf.file_path).toDF
+        case _    => getSparkSession.read.textFile(tableConf.file_path).toDF
       }
 
     (tableConf, df)
@@ -52,7 +55,7 @@ object FlatFileReader extends Reader {
 
   def readExcel(fileName: String, schema: StructType): DataFrame = {
 
-    spark.read
+    getSparkSession.read
       .format(source = "com.crealytics.spark.excel")
       .schema(schema)
       .option("sheetName", "Sheet1")
@@ -82,7 +85,7 @@ object FlatFileReader extends Reader {
     /* lazy val numOfFiles = getNumberOfFiles(fileLocation)
      * if(fileLocation.startsWith("file:///") || numOfFiles ==1)*/
 
-    spark.read
+    getSparkSession.read
       .format("csv")
       .option("header", true.toString)
       .option("quote", "\"")

@@ -14,6 +14,8 @@ object TypeCastTransformer extends BaseTransformer {
 
   private val logger: Logger = Logger.getLogger(TypeCastTransformer.getClass)
 
+  logger.info("Inside the TypeCastTransformer object")
+
   override def transform(
     dataFrameSeq: ParSeq[(TableConfig, DataFrame)]
   ): ParSeq[(TableConfig, DataFrame)] = {

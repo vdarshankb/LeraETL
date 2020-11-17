@@ -15,6 +15,7 @@ object Constants {
   val numOfPartitions: String = ""
 
 
+  val source_config_table_type = "Hive"
 
   val configDB: String = "spark.config_database"
   val auditDB: String = "spark.audit_database"
@@ -86,15 +87,21 @@ object Constants {
 
   //val impalaURL: String = "spark.impalaConnectionURL"
   val hiveURL: String = "spark.hiveConnectionURL"
+  val jdbcURL: String = "spark.hiveConnectionURL"
 
   //val jdbcDriver: String = "spark.impalaJDBCDriver"
   val hiveJDBCDriver: String = "spark.hiveJDBCDriver"
+
+  val jdbcDriver: String = "spark.hiveJDBCDriver"
 
   //val impalaUserName: String = "spark.impala_username"
   //val impalaPassword: String = "spark.impala_password"
 
   val hiveUserName: String = "spark.hive_username"
   val hivePassword: String = "spark.hive_password"
+
+  val jdbcUserName: String = "spark.hive_username"
+  val jdbcPassword: String = "spark.hive_password"
 
   val driver: String = "driver"
   val kuduType: String = "Kudu"

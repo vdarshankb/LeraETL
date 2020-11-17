@@ -2,16 +2,21 @@ package org.lera.etl.readers
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark._
 import org.apache.spark.sql.functions.{max, min}
 import org.apache.spark.sql.types.{DataType, LongType, StringType, TimestampType}
-import org.apache.spark.sql.{DataFrame, Row}
-import org.lera.ContextCreator.spark
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Writers
 import org.lera.etl.util.Enums.Writers._
 import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.utils._
-import org.lera.{ContextCreator, TableConfig}
+import org.lera.{TableConfig, connectionContextCreator}
+import org.lera.connectionContextCreator.{getSparkSession, spark}
+
+
+//import org.lera.{ContextCreator, TableConfig}
+//import org.lera.ContextCreator.spark
 
 trait Reader{
 
@@ -26,12 +31,12 @@ trait Reader{
 
   def isFilePathExists(path: String): Boolean = {
     FileSystem.get(new Configuration()).exists(new Path(path))
-
   }
 
   def jsonToDataFrame(jsonString: Seq[String]): DataFrame = {
+    val spark: SparkSession = getSparkSession
     import spark.implicits._
-    spark.read.json(jsonString.toDS)
+    getSparkSession.read.json(jsonString.toDS)
   }
 
   def getIncrementalValueBasedOnSourceSystems(
@@ -115,14 +120,10 @@ trait Reader{
                                    condition: String): DataFrame = {
 
     targetType match {
-      case HIVE =>
-        spark
-          .table(targetTable)
+      case HIVE => getSparkSession.table(targetTable)
           .where(condition)
           .selectExpr(columns.split(StringExpr.comma): _*)
-
       case _ => readKuduTableWithColumns(targetTable, columns, condition)
-
     }
   }
 

@@ -1,13 +1,17 @@
 package org.lera.etl.transformers
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.lera.TableConfig
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.utils._
-import org.lera.ContextCreator.spark
 
 import scala.collection.parallel.ParSeq
+import org.lera.connectionContextCreator.spark
+
+//import org.lera.ContextCreator.spark
+
+
 object DeleteTransformer extends FilterBaseTransformer {
 
   import org.apache.spark.sql.types.DataType
@@ -66,7 +70,8 @@ object DeleteTransformer extends FilterBaseTransformer {
           getConditionalExpr(conf.source_table, tableSchema, groupedDeletes)
 
         if (conditionalExpr.isEmpty) df
-        else df.where(conditionalExpr)
+        else
+          df.where(conditionalExpr)
       }
     })
 
@@ -127,18 +132,17 @@ object DeleteTransformer extends FilterBaseTransformer {
     val whereQuery: String =
       Map(sourceTable -> source_table).toWhereCondition.ignoreCaseInSQL
 
-   import spark.implicits._
+    import org.lera.connectionContextCreator.getSparkSession
+    val spark: SparkSession = getSparkSession
+    import spark.implicits._
 
-
-    val deleteDataArray: Array[FilterData] = configDataFrame
-      .where(whereQuery)
-      .select(
+    val deleteDataArray: Array[FilterData] = configDataFrame.where(whereQuery).select(
         $"delete_col_name".as( "filter_col_name"),
         $"delete_condition".as( "filter_condition"),
-        $"delete_value".as( "filter_value"),
+        $"delete_value".as("filter_value"),
         $"logical_operator",
         $"delete_order".as( "filter_order"),
-        $"group_order"
+        s"group_order"
       )
       .as[FilterData]
       .collect()

@@ -1,11 +1,16 @@
 package org.lera.etl.util
 import java.util.Properties
 
-
 import org.apache.spark.sql.DataFrame
-import org.lera.ContextCreator.spark
 import org.lera.etl.util.Constants._
+import org.lera.connectionContextCreator.{getSparkSession, spark}
+
+import org.lera.etl.util.jdbcConnector.{JDBCdriver, connectionURL, statement}
+
+/*
+import org.lera.ContextCreator.spark
 import org.lera.etl.util.ImpalaConnector.{JDBCDriver, connectionURL, statement}
+*/
 
 import scala.util.Try
 
@@ -36,8 +41,7 @@ object Predicates {
         s"$cond AND $additionalCondition"
       })
       else conditionArray
-
-    spark.read.jdbc(connectionURL, query, finalCondArray, getJDBCProperties )
+    getSparkSession.read.jdbc(connectionURL, query, finalCondArray, getJDBCProperties )
   }
 
   /*
@@ -170,7 +174,7 @@ object Predicates {
   def getJDBCProperties : Properties = {
     import java.util.Properties
     val properties = new Properties()
-    properties.setProperty("driver",JDBCDriver)
+    properties.setProperty("driver",JDBCdriver)
     properties.setProperty("fetchsize","100000")
     properties.setProperty("pushDownPredicate","false")
     properties

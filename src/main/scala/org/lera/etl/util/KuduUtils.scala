@@ -1,15 +1,17 @@
 package org.lera.etl.util
-
 import org.lera.etl.util.Constants.StringExpr
-
-import org.lera.etl.util.ImpalaConnector._
-
 import org.lera.etl.util.utils._
-import org.lera.{ContextCreator, TableConfig}
-import org.lera.ContextCreator.spark
-import org.lera.ContextCreator.getProperty
 
 import scala.util.{Failure, Success}
+import org.lera.{TableConfig, connectionContextCreator}
+import org.lera.connectionContextCreator.{getProperty, getSparkSession}
+import org.lera.etl.util.jdbcConnector.{JDBCdriver, connectionURL, executeQuery}
+
+
+//import org.lera.etl.util.ImpalaConnector._
+//import org.lera.ContextCreator.{getProperty,spark}
+//import org.lera.{ContextCreator, TableConfig}
+
 
 object KuduUtils {
 
@@ -17,7 +19,7 @@ object KuduUtils {
   import org.apache.spark.sql.DataFrame
   import scala.util.Try
 
-  lazy val defaultNoOfPartitions : Int = spark.conf
+  lazy val defaultNoOfPartitions : Int = getSparkSession.conf
     .getOption(key = "spark.kudu_default_partitions")
     .getOrElse(200.toString)
     .toInt
@@ -179,6 +181,7 @@ object KuduUtils {
                                selectColumns : String = "",
                                whereClause : String = ""): DataFrame = {
 
+    logger.info("Inside the readHiveTableWithColumns method.")
     val columns   = if(selectColumns.isEmpty) "*" else selectColumns
     val whereCond = if(whereClause.isEmpty) "" else s"WHERE $whereClause"
 
@@ -186,9 +189,13 @@ object KuduUtils {
     // was causing trouble with hive
     //val query = s"(SELECT $columns FROM $tableName $whereCond)${tableName.split("\\.")(1)}"
 
-    val query = s"(SELECT $columns FROM $tableName $whereCond)"
+    val query = s"SELECT $columns FROM $tableName $whereCond"
     logger.info(s"Reading hive table with columns: $query")
-    readHiveTableWithQuery(query)
+    val queryOutputDF = readHiveTableWithQuery(query)
+
+    logger.info(s"Displaying the contents after the readHiveTableWithQuery: $query")
+
+    queryOutputDF
   }
 
   /*
@@ -243,7 +250,7 @@ object KuduUtils {
 
   def isHiveIntermediateEnabled(sourceSystem : String) : Boolean = {
 
-    val sourceSystems = spark.conf
+    val sourceSystems = getSparkSession.conf
       .getOption(key = "spark.read_kudu_using_hive_source_systems")
       .getOrElse(StringExpr.empty)
 
@@ -268,9 +275,11 @@ object KuduUtils {
       s"DROP TABLE IF EXISTS $intermediateTable"
 
     executeQuery(dropStatement)
+
     val tableCreateStatement : String =
       s"CREATE TABLE $intermediateTable.STORED AS PARQUET AS SELECT * FROM ($query)tmp WHERE false"
-	  executeQuery(tableCreateStatement)
+
+    executeQuery(tableCreateStatement)
 
     val columns : String = readHiveTable(intermediateTable).columns
       .map(col => s"'$col'")
@@ -280,21 +289,32 @@ object KuduUtils {
       s"INSERT INTO TABLE $intermediateTable ($columns) SELECT $columns FROM ($query)tmp"
 
     executeQuery(insertQuery)
-    spark.catalog.refreshTable(intermediateTable)
+    getSparkSession.catalog.refreshTable(intermediateTable)
 
-    readHiveTable(tableName = s"$intermediateTable")
+    readHiveTable(s"$intermediateTable")
   }
 
   /*
-  * Read Kudu table using jdbc connection and convert them into data set using spark session
+  * Execute query on Hive table using spark session
+  * This internally calls the readHiveTableWithQuery
   *
-  * @param tableName Kudu table name or query
+  * @param query
   * @return
   * */
+  def executeHiveQuery(query : String): DataFrame = {
+    readHiveTableWithQuery(query)
+  }
 
+  /*
+ * Read Hive table
+ *
+ * @param query
+ * @return
+ * */
   def readHiveTableWithQuery(query : String): DataFrame = {
-    logger.info(s"Inside readHiveTableWithQuery method and Executing $query using spark sql")
-    spark.sql(query)
+    logger.info(s"Inside readHiveTableWithQuery method and Executing $query using spark sql and below is the sample data")
+    getSparkSession.sql(query).show(10)
+    getSparkSession.sql(query)
   }
 
 
@@ -312,13 +332,13 @@ object KuduUtils {
 
       Try{
         logger.info(s"Reading Kudu data for the table or query >> $tableName")
-        val dataFrame : DataFrame = spark.read
+        val dataFrame : DataFrame = getSparkSession.read
         .format(source="jdbc")
         .option("charset","UTF8")
         .options(
         Map(
             "url"       -> connectionURL,
-            "driver"    -> JDBCDriver,
+            "driver"    -> JDBCdriver,
             "dbtable"   -> tableName,
             "fetchsize" -> 100000.toString
         ) ++ partitions

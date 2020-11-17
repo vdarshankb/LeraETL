@@ -17,8 +17,10 @@ import scala.collection.parallel.ParSeq
 
 object DefaultValueSetTransformer extends BaseTransformer {
 
-  private val logger: Logger =
-    Logger.getLogger(DefaultValueSetTransformer.getClass)
+  private val logger: Logger = Logger.getLogger(DefaultValueSetTransformer.getClass)
+
+  logger.info("Inside the DefaultValueSetTransformer object")
+
   /*
    * @param dataFrameSeq input dataset
    * @return
@@ -63,11 +65,11 @@ object DefaultValueSetTransformer extends BaseTransformer {
             })
             .toMap
 
-        val defaultValueSetDf: DataFrame =
-          setDefaultValues(tableSchema, sourceDf, defaultVal)
+        logger.info(s"Printing the table schema: ${tableSchema.seq.toString()}")
 
-        val updatedTableconf: TableConfig =
-          updateTableConfig(tableConf, invalidDefaultColumns)
+        val defaultValueSetDf: DataFrame = setDefaultValues(tableSchema, sourceDf, defaultVal)
+
+        val updatedTableconf: TableConfig = updateTableConfig(tableConf, invalidDefaultColumns)
 
         (updatedTableconf, defaultValueSetDf)
       }
@@ -103,15 +105,15 @@ object DefaultValueSetTransformer extends BaseTransformer {
       tableSchema
         .getOrElse(
           columnName,
-          logger.warn(
-            s"Target table does not have the default value column : $columnName"
-          )
+          logger.warn(s"Target table does not have the default value column : $columnName")
         )
 
       val defaultValue: String =
         if (defaultColumnTup._2.trim.equalsIgnoreCase("null")) null
         else defaultColumnTup._2
+
       df.withColumn(columnName, lit(defaultValue))
+
     })
   }
 

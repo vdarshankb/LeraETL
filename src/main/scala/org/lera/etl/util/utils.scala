@@ -7,14 +7,23 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.{col, trim}
 import org.apache.spark.sql.types.{DataType, StringType}
-import org.apache.spark.sql.{DataFrame, Encoder, Row}
-import org.lera.ContextCreator.getProperty
+import org.apache.spark.sql.{DataFrame, Encoder, Row, SparkSession}
+
 import org.lera.etl.util.Constants.StringExpr._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
 import org.lera.etl.util.Enums._
-import org.lera.ContextCreator.spark
-import org.lera.{ContextCreator, TableConfig}
+import org.lera.etl.util.KuduUtils.executeHiveQuery
+
+//import org.lera.ContextCreator.getProperty
+//import org.lera.ContextCreator.spark
+//import org.lera.{ContextCreator, TableConfig}
+//import org.lera.etl.util.ImpalaConnector._
+
+import org.lera.{connectionContextCreator,TableConfig }
+import org.lera.connectionContextCreator._
+import org.lera.connectionContextCreator.{getProperty, getConf, getSparkSession}
+
 
 import scala.collection.GenSeq
 import scala.collection.parallel.ParSeq
@@ -26,7 +35,6 @@ import scala.util.{Failure, Success, Try}
 object utils {
   
   lazy val columnMappingConfigTableName : String = {
-    
     val columnMappingTable : String = getProperty(columnMappingCfgTableName)
     s"$configDatabase.$columnMappingTable"
   }
@@ -63,18 +71,18 @@ object utils {
   
   lazy val filterColumnTableName : String = {
     
-    val filterTable : String = getProperty(filterCfgTableName)
+    val filterTable: String = getProperty(filterCfgTableName)
     s"$configDatabase.$filterTable"
   }
   
-  lazy val startTime : Timestamp = now
+  lazy val startTime: Timestamp = now
 
-  val configDatabase : String = getProperty(configDB)
-  val configTable : String = getProperty(genericCfgTableName)
-  val auditDatabase : String = getProperty(auditDB)
-  val auditTable : String = getProperty(auditCfgTableName)
+  val configDatabase: String = getProperty(configDB)
+  val configTable: String = getProperty(genericCfgTableName)
+  val auditDatabase: String = getProperty(auditDB)
+  val auditTable: String = getProperty(auditCfgTableName)
   
-  val mapSQLValue : Map[String, String] => String =
+  val mapSQLValue: Map[String, String] => String =
     _.mapValues(value => s"'$value'")
       .map(tuple => s"${tuple._1}=${tuple._2}")
         .mkString(sqlAND)
@@ -90,7 +98,7 @@ object utils {
       .getOrElse(throw new ETLException("unknown target type"))
 
   val auditUpdate: (TableConfig,RunStatus) => Unit = (config,runState) => {
-    leraAuditTableUpdate(
+    auditTableUpdate(
     tableRunInfo = TableRunInfo(
     sourceSystem = config.source_system,
     region = config.sourcedata_regionname,
@@ -102,14 +110,15 @@ object utils {
     )
   }
 
-  val auditTableName : String = s"$auditDatabase.$auditCfgTableName"
+  val auditTableName : String = s"$auditDatabase.$auditTable"
   private val logger : Logger = Logger.getLogger( this.getClass)
 
   def selectSQLColumns(values : String*): String =
     values.mkString(StringExpr.comma)
 
   def readSQLFromHDFSFile(filepath : String) : String ={
-    spark.read.textFile(filepath).collect().mkString
+    getSparkSession.read.textFile(filepath).collect().mkString
+    //spark.read.textFile(filepath).collect().mkString
   }
 
   def insert[T](list : Seq[T], i:Int, value : T)  : Seq[T] = {
@@ -118,7 +127,8 @@ object utils {
   }
 
   def isSourceEnabled(property : String, source : String) : Boolean =
-    spark.conf
+//    spark.conf
+    getSparkSession.conf
       .getOption(key = property)
       .getOrElse(StringExpr.empty)
       .trim
@@ -127,7 +137,8 @@ object utils {
       .contains(source.toLowerCase)
 
   def isSourceBasedLoad(sourceSystem : String) : Boolean =
-    spark.conf
+   // spark.conf
+    getSparkSession.conf
       .getOption("")
       .getOrElse(empty)
       .trim
@@ -163,8 +174,14 @@ object utils {
   * */
 
   def readHiveTable(tableName: String) : DataFrame = {
-    logger.info(s"Read Hive table using query: $tableName")
+
+    val spark: SparkSession = getSparkSession
+
+    println(s"Executing for tble name:$tableName")
+    logger.info(s"Read hive table using table name: $tableName")
+    spark.sql(s"Select * from $tableName").show(10)
     spark.table(tableName)
+
   }
 
   /*
@@ -174,7 +191,7 @@ object utils {
    * @return Number of files
    * */
   def getNumberOfFiles(hdfsFileLocation : String) : Int = {
-    val fs: FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+    val fs: FileSystem = FileSystem.get(getSparkSession.sparkContext.hadoopConfiguration)
     val filepath : String = hdfsFileLocation.replace(
          hdfsFileLocation.split( StringExpr.slash).last,
          StringExpr.empty
@@ -204,13 +221,12 @@ object utils {
    * @param tableRunInfo table info
    * */
 
-   def leraAuditTableUpdate(tableRunInfo : TableRunInfo): Unit = {
+   def auditTableUpdate(tableRunInfo: TableRunInfo): Unit = {
 
+     logger.info(s"Inside the auditTableUpdate method")
      import Enums.RunStatus._
-     //TableRunInfo(sourceSystem : String, tableName : String, loadType : String, status : RunStatus, errorMessage : String = "")
 
-     val TableRunInfo(source, regionName, table, loaderType, runInfo, message) =
-       tableRunInfo
+     val TableRunInfo(source, regionName, table, loaderType, runInfo, message) = tableRunInfo
 
      val query : String = runInfo match{
        case RUNNING =>
@@ -222,24 +238,21 @@ object utils {
 
          //Change the syntax of the INSERT statement
        case SUCCESS =>
-         s"INSERT $auditTableName SET run_status = '$SUCCESS', end_time = '$now', message = '$message' WHERE table_name = '$table' AND run_status = 'RUNNING';"
+         s"INSERT INTO $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','','$SUCCESS','');"
 
-       /*case TableRunInfo(_,_,table,_,FAILED, error) =>
-        * s"UPDATE auditTableName SET run_status = '$FAILED', end_time = '$now', message = '$error' WHERE table_name = '$table' AND run_status = 'RUNNING';"
-        * */
 
        // For Kudu audit table the upsert will work
        /*case FAILED =>
          s"UPSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
 */
-
          //Change the correct syntax for INSERT
        case FAILED =>
          s"INSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
-
      }
 
-//     executeQuery(queries = query)
+     executeHiveQuery(query)
+     //executeQuery(query)
+
    }
 
    def getJobStatus(sourceConf : ParSeq[TableConfig]): Array[TableRunInfo] = {
@@ -326,6 +339,7 @@ object utils {
    def readTableSchema(tableName : String) : Map[String, DataType] = {
 
      val queryForSchema : String = s"(SELECT * FROM $tableName WHERE 1=0) _schema"
+     logger.info(queryForSchema)
 
      KuduUtils
        .readKuduTable(tableName = queryForSchema)
@@ -338,9 +352,9 @@ object utils {
 
    // Read partition column from table
    def readPartitionColumns(tableName : String) : String = {
-     val columnNames : Array[String] = spark
-       .sql(sqlText = s"DESC $tableName")
-       .select(col = "COL_NAME")
+     val columnNames : Array[String] = getSparkSession
+       .sql(s"DESC $tableName")
+       .select( "COL_NAME")
        .collect()
        .map(_.getString(0))
 

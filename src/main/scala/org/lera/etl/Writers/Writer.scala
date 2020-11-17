@@ -1,12 +1,11 @@
 package org.lera.etl.Writers
 
 import org.apache.spark.sql.DataFrame
-import org.lera.{ContextCreator, TableConfig}
 import org.lera.etl.util.Constants._
-
 import scala.collection.parallel.ParSeq
+import org.lera.{connectionContextCreator, TableConfig}
 
-
+//import org.lera.{ContextCreator, TableConfig}
 /*
  * Writer for persisting dataset into target system
  *

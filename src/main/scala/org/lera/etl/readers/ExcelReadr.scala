@@ -47,7 +47,7 @@ object ExcelReadr extends PipelineBase {
     finalDF.show()
     println("Records in final df : " + finalDF.count())
 
-    spark.stop()
+    //spark.stop()
   }
 
   def readExcelData(properties: Properties): DataFrame = {

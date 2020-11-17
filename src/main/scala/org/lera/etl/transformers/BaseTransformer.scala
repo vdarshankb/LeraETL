@@ -16,14 +16,21 @@ import org.lera.etl.util.Enums.Writers._
 import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.Parser._
 import org.lera.etl.util.utils._
-import org.lera.{ContextCreator, DateTimeConvert, TableConfig, TimeConvert}
+
+import org.lera.{connectionContextCreator, DateTimeConvert, TableConfig, TimeConvert}
+
+/*
+import org.lera.ContextCreator
+*/
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
 
-
 trait BaseTransformer {
+
   private val logger: Logger = Logger.getLogger(this.getClass)
+  logger.info("Inside the trait BaseTransformer")
+
   val fiscalYearUDF: UserDefinedFunction = udf(
     (value: String, sourceFormat: String) => {
 
@@ -46,14 +53,17 @@ trait BaseTransformer {
   val targetTableSchema: TableConfig => StructType = tableConf => {
 
     val targetTable = s"${tableConf.target_database}.${tableConf.target_table}"
-    getTargetType(tableConf.target_table_type) match {
 
+    logger.info(s"Reading schema for target table: $targetTable and its of type: ${tableConf.target_table_type}")
+
+    getTargetType(tableConf.target_table_type) match {
       case HIVE => readHiveTable(targetTable).schema
       case KUDU => readKuduWithCondition(targetTable, where = false).schema
       case _    => StructType(Array.empty[StructField])
 
     }
   }
+
   val fiscalWeekOfYearUdf: UserDefinedFunction = udf(
     (value: String, sourceFormat: String) => {
 
@@ -73,6 +83,7 @@ trait BaseTransformer {
 
     }
   )
+
   val dateTimeFormatter: UserDefinedFunction = udf(
     (value: String, sourceFormat: String, targetFormat: String) => {
       dateValidator(value)(value => {
@@ -110,6 +121,7 @@ trait BaseTransformer {
 
     }
   )
+
   val timeConversionUDf: UserDefinedFunction = udf(
     (value: Int, from: String, to_ : String) => {
       val inTime = Duration(value, from)
@@ -124,26 +136,30 @@ trait BaseTransformer {
       }
     }
   )
+
   val readLookUpData: TableConfig => DataFrame = lookUpConfig =>
     getReaderInstance(lookUpConfig.source_table_type).readData(lookUpConfig)._2
 
+  //Prepare the where condition based on the source_system and sourcedata_regionname
   val whereCondFunc: TableConfig => String = tableConfig =>
     Map(
       sourceSystem -> tableConfig.source_system,
       sourceDataRegionName -> tableConfig.sourcedata_regionname
     ).toWhereCondition
 
+
   /*
-   * Each transformation provides differentlogic based on sources
+   * Each transformation provides different logic based on sources
    * @param dataFrameSeq tuples of table config and data frame
    * @return
    *  */
-  val configReader: String => TableConfig => Boolean => DataFrame =
+  val configReaderFromHiveTable: String => TableConfig => Boolean => DataFrame =
     configTableName =>
       tableConfig => {
-        val joinTableDf: DataFrame =
-          readKuduWithCondition(configTableName, whereCondFunc(tableConfig))
+        val joinTableDf: DataFrame = {
+          readHiveWithCondition(configTableName, whereCondFunc(tableConfig))
             .cache()
+        }
 
         throwError =>
           if (joinTableDf.isEmpty) {
@@ -157,6 +173,38 @@ trait BaseTransformer {
               logger.warn(errMessage)
             }
           }
+          joinTableDf
+      }
+
+  /*
+   * Each transformation provides differentlogic based on sources
+   * @param dataFrameSeq tuples of table config and data frame
+   * @return
+   *  */
+  val configReader: String => TableConfig => Boolean => DataFrame =
+    configTableName =>
+      tableConfig => {
+        val joinTableDf: DataFrame = {
+          logger.info("Before calling the readHiveWithCondition in the BaseTransformer.configReader method")
+          if(source_config_table_type == "Hive") (
+            readHiveWithCondition(configTableName, whereCondFunc(tableConfig)).cache()
+            )
+          else readKuduWithCondition(configTableName, whereCondFunc(tableConfig)).cache()
+        }
+
+        throwError =>
+          if (joinTableDf.isEmpty) {
+            import org.lera.etl.util.ETLException
+            val errMessage: String =
+              s"Missing entries in the $configTableName table for source system : $sourceSystem"
+            if (throwError) {
+              logger.error(errMessage)
+              throw new ETLException(errMessage)
+            } else {
+              logger.warn(errMessage)
+            }
+          }
+
           joinTableDf
     }
 
@@ -269,11 +317,7 @@ trait BaseTransformer {
           timeConversionUDf(col(sourceColumn), lit(sourceTime), lit(targetTime))
         )
       })
-
     }
-
-    // for Lynx inventory
-
   }
 
   implicit class ColumnImplicits(column: Column) {
@@ -290,15 +334,17 @@ trait BaseTransformer {
       trim(column)
     }
   }
-  val getDefaultTableConfigFunc: String => TableConfig => DataFrame = table =>
-    config => configReader(table)(config)(false)
+
+  val getDefaultTableConfigFunc: String => TableConfig => DataFrame = table => config => configReader(table)(config)(false)
+
+  logger.info(s"getDefaultTableConfigFunc value is: $getDefaultTableConfigFunc")
 
   implicit class ConditionImplicits(map: Map[String, String]) {
 
     def toWhereCondition: String = {
       map
         .mapValues(value => s"'$value'")
-        .map(keyValues => s"${keyValues._1}-${keyValues._2}")
+        .map(keyValues => s"${keyValues._1}=${keyValues._2}")
         .mkString(" AND ")
     }
   }

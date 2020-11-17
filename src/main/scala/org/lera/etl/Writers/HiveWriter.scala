@@ -2,20 +2,30 @@ package org.lera.etl.Writers
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}
-import org.lera.ContextCreator.session
 import org.lera.TableConfig
 import org.lera.etl.util.Constants
-import org.lera.ContextCreator.spark
 
 import scala.util.{Success, Try}
 import org.lera.etl.util.utils._
 import org.lera.etl.util.Constants._
-import org.lera.etl.util.ImpalaConnector._
 import org.lera.etl.util.Enums.RunStatus._
 
 import scala.collection.parallel.ParSeq
+import org.lera.connectionContextCreator.getSparkSession
+import org.lera.etl.util.jdbcConnector
+import org.lera.etl.util.jdbcConnector.executeQuery
+
+/*
+import org.lera.ContextCreator.spark
+import org.lera.ContextCreator.session
+import org.lera.etl.util.ImpalaConnector._
+*/
+
+
 object HiveWriter extends Writer {
+
   private val logger: Logger = Logger.getLogger(HiveWriter.getClass)
+  logger.info("Inside the Hive Writer object")
 
   /*
    * Write datasets into target table or file system
@@ -40,8 +50,7 @@ object HiveWriter extends Writer {
 
         logger.info(s"Loading data into target table $finalTargetTableName")
 
-        val partitionColumns: String =
-          readPartitionColumns(finalTargetTableName)
+        val partitionColumns: String = readPartitionColumns(finalTargetTableName)
         val updatedDf: DataFrame =
           if (load_type.equalsIgnoreCase(Constants.fullLoadType) || load_type
                 .toLowerCase()
@@ -72,6 +81,7 @@ object HiveWriter extends Writer {
       logger.info(
         s"Data loaded successfully into target Hive table $finalTargetTableName"
       )
+
       auditUpdate(tableConf, SUCCESS)
 
     })
@@ -85,9 +95,7 @@ object HiveWriter extends Writer {
     logger.debug(
       s"Executing query : INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
     )
-    session.sql(
-      sqlText =
-        s"INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
+    getSparkSession.sql(s"INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
     )
 
   }
@@ -115,15 +123,12 @@ object HiveWriter extends Writer {
       s"Partition columns for table $targetTableName are $partitionColumns"
     )
 
-    spark.sql(sqlText = "SET hive.exec.dynamic.partition = true")
-    spark.sql(sqlText = "SET hive.exec.dynamic.partition.mode = nonstrict")
+    getSparkSession.sql("SET hive.exec.dynamic.partition = true")
+    getSparkSession.sql("SET hive.exec.dynamic.partition.mode = nonstrict")
     logger.debug(
       s"Executing query : INSERT OVERWRITE TABLE $targetTableName PARTITION $partitionColumns"
     )
-
-    spark.sql(
-      sqlText =
-        s"INSERT OVERWRITE TABLE $targetTableName PARTITION $partitionColumns"
+    getSparkSession.sql(s"INSERT OVERWRITE TABLE $targetTableName PARTITION $partitionColumns"
     )
 
   }
@@ -153,7 +158,7 @@ object HiveWriter extends Writer {
         .saveAsTable(tableName = s"${targetTableName}_temp")
       readHiveTable(tableName = s"${targetTableName}_temp")
     } else df
-    spark.sql(sqlText = s"TRUNCATE TABLE $targetTableName")
+    getSparkSession.sql(s"TRUNCATE TABLE $targetTableName")
     fullLoadDf
   }
 

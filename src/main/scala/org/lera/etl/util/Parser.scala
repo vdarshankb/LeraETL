@@ -2,19 +2,18 @@ package org.lera.etl.util
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{Encoder, Encoders}
-import org.lera.ContextCreator.spark
-import org.lera.{ContextCreator, TableConfig}
+
 import org.lera.etl.Writers._
 import org.lera.etl.readers._
 import org.lera.etl.transformers._
 import org.lera.etl.util.Constants.{StringExpr, StringImplicits, incremental}
 import org.lera.etl.util.Enums.{LoaderType, Transformers, Writers}
-import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.utils._
 
 import scala.collection.parallel.{MIN_FOR_COPY, ParSeq}
 
-
+import org.lera.connectionContextCreator.getSparkSession
+import org.lera.{connectionContextCreator, TableConfig}
 
 //Added case class for loading partition table
                        
@@ -43,14 +42,13 @@ object Parser {
     
     import Enums.Transformers._
     
-    val genericTransformers : Seq[String] =
-      Seq(ColumnMap, DefaultValue, TypeCast).map(_.toString)
-      
-   //List all the transformers required for each source system
+    val genericTransformers : Seq[String] = Seq(ColumnMap, DefaultValue, TypeCast).map(_.toString)
+
+    //List all the transformers required for each source system
    //The transformers can be provided in properties file as comma separated
   // make changes in below blocks of code
 
-  val transformers : Seq[String] = spark.conf
+  val transformers : Seq[String] = getSparkSession.conf
     .getOption(s"spark.${sourceSystem.toLowerCase}_transformers")
     .getOrElse({
       logger.warn(
@@ -71,7 +69,7 @@ object Parser {
           
         case _ =>
           logger.info(
-          s"Generic transformers added for execution are : $genericTransformers"    
+          s"Generic transformers added for execution are: $genericTransformers"
           )
           
           genericTransformers.mkString(StringExpr.comma)
@@ -98,6 +96,9 @@ object Parser {
       .getOrElse(
         throw new Exception(s"Unknown transformer type : $transformerType")
       )
+
+    logger.info(s"Transtype Enumeration value is: $transType")
+
     import Enums.Transformers._
       
     transType match {
@@ -126,8 +127,7 @@ object Parser {
     logger.info(s"Inside the getTableConfigs method.")
     logger.info(s"Transformations and data ingestion for all the tables under the system: $sourceSystem")
     
-    val filterCondition : String =
-      s"${Constants.sourceSystem} = '$sourceSystem' AND ${Constants.sourceDataRegionName}='$region'".ignoreCaseInSQL
+    val filterCondition : String = s"${Constants.sourceSystem} = '$sourceSystem' AND ${Constants.sourceDataRegionName}='$region'".ignoreCaseInSQL
 
     logger.info(s"Filter condition is set and now it will invoke ConfigReader.configLoader($filterCondition)")
 
@@ -211,6 +211,9 @@ object Parser {
    * */
   
   def getWriterInstance(writeType:String): Writer = {
+
+    logger.info(s"Writer Type is: $writeType")
+
     val writerType: Enums.Writers.Value = Writers
       .fromString(writeType)
       .getOrElse(throw new Exception(s"Unknown writer type : $writeType"))

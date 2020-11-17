@@ -5,15 +5,18 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.sql.{Connection, DriverManager, Statement}
 
-import org.lera.etl.util.utils.JDBC_URL_Generator
+import org.lera.etl.util.utils.{JDBC_URL_Generator, OptionUtils, PropertyException}
 import org.apache.spark.sql.functions._
-import org.apache.log4j.Logger
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
-import org.lera.ContextCreator.getProperty
+import org.lera.connectionContextCreator.{getConf, getProperty}
 import org.lera.etl.readers.{KuduReader, Reader}
-import org.lera.etl.util.Constants.fullLoadType
-import org.lera.etl.util.ImpalaConnector
+import org.lera.etl.util.Constants.{database_name, fullLoadType, loggerLevel}
+import org.lera.etl.util.jdbcConnector
 import org.lera.etl.util.Parser.logger
+import org.lera.etl.util.jdbcConnector.connection
+
+import scala.collection.mutable
 
 package object etl {
 
@@ -82,65 +85,131 @@ case class TimeConvert(sourceColumn: String,
 
 
 //trait ContextCreator {
+object connectionContextCreator
+{
+  private var spark: SparkSession = _
 
+  def close() = {
+    org.lera.etl.util.jdbcConnector
+    connection.close()
+    spark.close()
+  }
+
+  /*
+   * get property values from spak conf instance
+   * @param key key for getting the value
+   * @return
+   * */
+  def getProperty(key: String): String ={
+    getConf.getOption(key).getNonEmptyOrElse(throw PropertyException(key))
+
+  }
+
+  /* returns spark conf instance
+  *
+  * @return
+  */
+  def getConf: RuntimeConfig = {
+    getSparkSession.conf
+  }
+
+  /* Get the spark session context
+  *
+  * @return
+   */
+  def getSparkSession: SparkSession = {
+    if (null == spark) connectionContextCreator.apply()
+    spark
+  }
+
+  def apply(): SparkSession = {
+    //app name should be passed from the priperties file as (spark.app.name)
+    spark = SparkSession.builder().enableHiveSupport().getOrCreate()
+    import scala.collection.JavaConverters._
+
+    //Below lines of code is required for testing in local machine only
+    /*
+     spark = SparkSession.builder().master("local").getOrCreate()
+ */
+
+    val propertiesFilePath: String = "/home/spark/lera_etl/spark_lera_conf.properties"
+    println("Reading properties file..")
+
+    val property = new Properties()
+    property.load(new FileInputStream(propertiesFilePath))
+
+    val properties: mutable.Map[String, String] = property.asScala
+
+    for (key <- properties) {
+      spark.conf.set(key._1, key._2)
+    }
+
+    val logLevel: String = spark.conf.getOption(loggerLevel).orNull
+    Logger.getRootLogger.setLevel(Level.toLevel(logLevel, Level.INFO))
+    spark
+  }
+
+    /* Spark Session can be assigned or modified if it is created outside of the context creator
+    *
+    *@param spark spark session instance
+     */
+
+    def setSparkSession(spark: SparkSession) = {
+      this.spark = spark
+    }
+
+}
+
+/*
 object ContextCreator {
-  val spark: SparkSession = SparkSession
-    .builder()
-    .master("local")
-    .appName("etlapplication")
-    .enableHiveSupport()
-    .getOrCreate()
+
+ val spark: SparkSession = SparkSession
+   .builder()
+   .master("local")
+   .appName("etlapplication")
+   .enableHiveSupport()
+   .getOrCreate()
 
 
-  //Below are the setup for connecting to lera cluster
-  val jdbcURLString: String = "jdbc:hive2://10.22.1.66:2181,10.22.1.66:2181:2181,10.22.1.67:2181/default;password=welcome;serviceDiscoveryMode=zooKeeper;user=spark;zooKeeperNamespace=hiveserver2"
-  spark.conf.set("hive.metastore.uris", jdbcURLString)
+//Below are the setup for connecting to lera cluster
+val jdbcURLString: String = "jdbc:hive2://10.22.1.66:2181,10.22.1.66:2181:2181,10.22.1.67:2181/default;password=welcome;serviceDiscoveryMode=zooKeeper;user=spark;zooKeeperNamespace=hiveserver2"
+val propertiesFilePath = "/home/spark/lera_etl/spark_lera_conf.properties"
 
-  //Below are the setup for connecting to local laptop cluster
- // val jdbcURLString: String = "jdbc:hive2://sandbox-hdp.hortonworks.com:2181/default;password=maria_dev;serviceDiscoveryMode=zooKeeper;user=maria_dev;zooKeeperNamespace=hiveserver2"
+//Below are the setup for connecting to local laptop cluster
+// val jdbcURLString: String = "jdbc:hive2://sandbox-hdp.hortonworks.com:2181/default;password=maria_dev;serviceDiscoveryMode=zooKeeper;user=maria_dev;zooKeeperNamespace=hiveserver2"
+// val propertiesFilePath = "/home/maria_dev/spark_lera_conf.properties"
 
-  /*lazy val getConf: RuntimeConfig = spark.conf
-  lazy val sparkConf: RuntimeConfig = spark.conf
-*/
+spark.conf.set("hive.metastore.uris", jdbcURLString)
 
-  val session: SparkSession = spark
+lazy val getConf: RuntimeConfig = spark.conf
+lazy val sparkConf: RuntimeConfig = spark.conf
 
-/*
-  spark.conf.set("spark.hive.mapred.supports.subdirectories","true")
-  spark.conf.set("spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive","true")
-*/
+val session: SparkSession = spark
 
-//  spark.sql("SELECT * from default.generic_config").show(2)
+println("Reading properties file..")
 
-  println("Reading properties file..")
+val property = new Properties()
+property.load(new FileInputStream(propertiesFilePath))
 
-  val property = new Properties()
-  property.load(new FileInputStream("/home/spark/lera_etl/spark_lera_conf.properties"))
+import scala.collection.mutable
+import scala.collection.JavaConverters._
 
-  import scala.collection.mutable
-  import scala.collection.JavaConverters._
+val properties: mutable.Map[String, String] = property.asScala
 
-  val properties: mutable.Map[String, String] = property.asScala
+for (key <- properties){
+ spark.conf.set(key._1, key._2)
+}
 
-  for (key <- properties){
-    spark.conf.set(key._1, key._2)
-  }
-/*
-  println("executed the sql query using spark session")
-  val driverName: String = "org.apache.hive.jdbc.HiveDriver"
-  Class.forName(driverName)
 
-  val df = spark.read.format("jdbc").option("url", jdbcURLString)
-    .option("etl_config", "generic_config").load()
-  df.show()
+println("Displaying the contents of the default.generic_config table")
+spark.sql("SELECT * from default.generic_config").show(10)
 
-  println("executed the sql query using jdbc driver")
-*/
+def getProperty(propertyName: String): String = {
+ println(s"Fetching the property value: $propertyName")
+ spark.conf.get(propertyName)
+}
 
-  def getProperty(propertyName: String): String = {
-    println(s"Fetching the property value: $propertyName")
-    spark.conf.get(propertyName)
-  }
 
 
 }
+*/

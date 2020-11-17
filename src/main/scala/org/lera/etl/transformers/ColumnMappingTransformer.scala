@@ -13,10 +13,11 @@ import org.apache.spark.sql.functions._
 
 object ColumnMappingTransformer extends BaseTransformer {
 
-  val targetMappingColumns: mutable.Map[String, Array[String]] =
-    mutable.Map.empty
-  private val logger: Logger =
-    Logger.getLogger(ColumnMappingTransformer.getClass)
+  val targetMappingColumns: mutable.Map[String, Array[String]] = mutable.Map.empty
+
+  private val logger: Logger = Logger.getLogger(ColumnMappingTransformer.getClass)
+
+  logger.info("Inside the ColumnMappingTransformer object")
 
   /*
    * Convert or map the target columns for source columns
@@ -42,8 +43,7 @@ object ColumnMappingTransformer extends BaseTransformer {
           s"Mapping target columns for table :: ${tableConf.target_table}"
         )
 
-        val mappingColumnsList: Array[(String, String)] =
-          getColumnMappingConfig(tableConf, mappingConfigDataFrame)
+        val mappingColumnsList: Array[(String, String)] = getColumnMappingConfig(tableConf, mappingConfigDataFrame)
 
         val sourceColumns: Array[String] = df.columns.map(_.toLowerCase)
         val mappingSourceColumns: Array[String] = mappingColumnsList.map(_._1)
