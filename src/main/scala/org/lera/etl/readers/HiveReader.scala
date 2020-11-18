@@ -7,6 +7,7 @@ import org.lera.TableConfig
 import org.lera.etl.util.Constants
 import org.lera.etl.util.Constants.{StringExpr, _}
 import org.lera.etl.util.Enums.Writers.writerType
+import org.lera.etl.util.KuduUtils.readHiveTable
 import org.lera.etl.util.utils._
 
 object HiveReader extends Reader{
@@ -50,38 +51,22 @@ object HiveReader extends Reader{
   
   
   
-  private def getIncrementalLoadFilterCondition(
-    tableConf : TableConfig    
-  ): String = {
+  private def getIncrementalLoadFilterCondition(tableConf: TableConfig): String = {
+    val incDF: DataFrame = getIncrementalColumnDf(tableConf)
     
-    val incDF : DataFrame = getIncrementalColumnDf(tableConf)
-    
-    val maxValueArr : Array[Row] = 
+    val maxValueArr: Array[Row] =
       incDF.filter(_.getAs(0) != null).collect()
-      
-    if(maxValueArr.isEmpty){
-      
-      
-      StringExpr.empty
-    }
+
+    logger.info(s" Inisde getIncrementalLoadFilterCondition method and ${tableConf.source_database}${tableConf.source_table}")
+
+    if(maxValueArr.isEmpty){StringExpr.empty}
     else {
-      
-      val sourceIncrementalColumn : String = tableConf.source_increment_column
-      val sourceIncColumnDataType : DataType = readHiveTable(
-        tableName = s"${tableConf.source_database}.${tableConf.source_table}"    
-      ).selectExpr(sourceIncrementalColumn).schema.head.dataType
-      
-      generateFilterCondition(
-        sourceIncrementalColumn,
-        incDF.schema.head.dataType,
-        maxValueArr,
-        sourceIncColumnDataType
-      )
-      
+      val sourceIncrementalColumn: String = tableConf.source_increment_column
+      val sourceIncColumnDataType: DataType = readHiveTable(s"${tableConf.source_database}.${tableConf.source_table}").selectExpr(sourceIncrementalColumn).schema.head.dataType
+      generateFilterCondition(sourceIncrementalColumn,incDF.schema.head.dataType,maxValueArr,sourceIncColumnDataType)
     }
-  } 
-  
-  
+  }
+
   /* 
    * Validation for source based load
    * @param tableConf table config
@@ -91,10 +76,10 @@ object HiveReader extends Reader{
   
   def getIncrementalColumnDf(tableConf : TableConfig) : DataFrame = {
     
-    val targetTable : String = 
+    val targetTable: String =
       s"${tableConf.target_database}.${tableConf.target_table}"
-    val incrementalColumn : String = tableConf.target_increment_column
-    val targetType : writerType = getTargetType(tableConf.target_table_type)
+    val incrementalColumn: String = tableConf.target_increment_column
+    val targetType: writerType = getTargetType(tableConf.target_table_type)
     
     if(!isSourceBasedLoad(tableConf.source_system)){
       getIncrementalValueNonSourceBased(

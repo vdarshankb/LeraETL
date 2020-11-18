@@ -12,6 +12,7 @@ import org.lera.etl.util.Enums.RunStatus._
 
 import scala.collection.parallel.ParSeq
 import org.lera.connectionContextCreator.getSparkSession
+import org.lera.etl.util.KuduUtils.readHiveTable
 import org.lera.etl.util.jdbcConnector
 import org.lera.etl.util.jdbcConnector.executeQuery
 

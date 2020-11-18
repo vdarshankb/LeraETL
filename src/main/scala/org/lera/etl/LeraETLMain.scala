@@ -2,16 +2,23 @@ package org.lera.etl
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
+
+//import org.lera.ContextCreator.getProperty
+
+import org.lera.connectionContextCreator.{getProperty, getConf, getSparkSession}
+
 import org.lera.etl.util.Constants.StringExpr
 import org.lera.etl.util.Parser.{logger, _}
 import org.lera.etl.util.utils._
 import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo}
-import org.lera.{ContextCreator, TableConfig}
+//import org.lera.{ContextCreator, TableConfig}
+import org.lera.{connectionContextCreator, TableConfig}
+
 
 import scala.collection.parallel.ParSeq
 import scala.util.Try
 
-object LeraETLMain extends ContextCreator {
+object LeraETLMain  {
 
   import scala.concurrent.Future
 
@@ -19,7 +26,7 @@ object LeraETLMain extends ContextCreator {
 
   def main(args: Array[String]): Unit = {
 
-    logger.info(s"SparkSession is created")
+    logger.info(s"Checking command line arguments.")
 
     if ((args.length > 2 && null == args(2)) || (args.length == 2)) {
       logger.info(
@@ -44,14 +51,16 @@ object LeraETLMain extends ContextCreator {
 
     val ingestionThread: Future[Unit] = Future(startIngestionProcess(sourceSystem, tableConfigs))
 
-//    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
+    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
   }
 
   def ingestionMonitor(ingestionThread: Future[Unit],
                        config: ParSeq[TableConfig],
                        sourceSystem: String): Unit = {
 
+    /*
     import java.sql.Timestamp
+
 
     val (notifyInterval: Int, maxRunTime: Int) = getControl(sourceSystem)
 
@@ -92,7 +101,7 @@ object LeraETLMain extends ContextCreator {
         timeTaken = timeTaken + notifyInterval
         val message =
           s"Running more than ${s"${getHours()} ${getMinutes()}".trim}"
-      //  sendEmailNotification(config, sourceSystem, message, runTime())
+        sendEmailNotification(config, sourceSystem, message, runTime())
       }
 
       if (diffMinutes >= maxRunTime) {
@@ -112,8 +121,6 @@ object LeraETLMain extends ContextCreator {
 
       }
     }
-
-
 
     logger.info(s"Fatal time taken for execution: $diffMinutes minutes")
     val failedJobs: Array[TableRunInfo] = null
@@ -150,9 +157,14 @@ object LeraETLMain extends ContextCreator {
 
     }
 
+    */
+
   }
 
   def getControl(sourceSystem: String): (Int, Int) = {
+
+    logger.info(s"Inside the getControl method.")
+
     val tableName = s"$etlAuditDatabase.${getProperty("spark.job_exec_control_table")}"
     val controlDf = KuduUtils.readKuduWithCondition(tableName, s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
       )
@@ -169,6 +181,7 @@ object LeraETLMain extends ContextCreator {
           .toInt
 
       (defaultNotificationTime, defaultIntTime)
+
     } else {
       controlDf
         .collect()
@@ -196,7 +209,7 @@ object LeraETLMain extends ContextCreator {
 
     val completeSubject: String = subject + message
 
- //Remove ths comment when you want to send the email notifications
+ //Enable the commented code when you want to send email notifications
 
     EmailSMTPClient
       .sendMail(
@@ -262,13 +275,12 @@ object LeraETLMain extends ContextCreator {
 
     import org.lera.etl.util.Enums.RunStatus._
 
-    logger.info(
-      s"Database and table information are parsed from the config table ${tableConfigs.toString()}"
-    )
+    logger.info(s"Database and table information are parsed from the config table ${tableConfigs.toString()}")
 
+    //The below section is commented by Darshan. This will be resovled after implementing jb execution control table
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {
-        auditUpdate(tableConfig, RUNNING)
+        //auditUpdate(tableConfig, RUNNING)
         tableConfig
       })
       .flatMap(tableConfig => {
@@ -276,6 +288,10 @@ object LeraETLMain extends ContextCreator {
           getReaderInstance(tableConfig.source_table_type).readData(tableConfig)
         )
       })
+
+
+    //The below line is added by Darshan
+  //  val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs.flatMap((tableConfig => { handler(tableConfig)(getReaderInstance(tableConfig.source_table_type).readData(tableConfig))}))
 
     // Retain the below line for local testing
     // rawData.foreach(_._2.show(false))
@@ -286,6 +302,7 @@ object LeraETLMain extends ContextCreator {
         .foldLeft(rawData)((rawData, transIns) => {
           transIns.transform(rawData)
         })
+
     // Write transformed data into
     transformedData
       .map(values => {

@@ -6,7 +6,6 @@ import org.lera.etl.util.utils.JDBC_URL_Generator
 
 import scala.util.{Failure, Success}
 import org.apache.log4j.Logger
-import org.lera.connectionContextCreator
 import org.lera.connectionContextCreator.{getProperty, spark}
 import org.lera.etl.util.Constants._
 
@@ -23,6 +22,7 @@ object jdbcConnector {
 
   Class.forName(JDBCdriver).newInstance
   val connectionURL: String = JDBC_URL_Generator(getProperty(jdbcURL), userName, password)
+
   private val logger: Logger = Logger.getLogger(jdbcConnector.getClass)
 
   /* Driver properties to initialise jdbc table connection

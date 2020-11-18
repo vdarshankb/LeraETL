@@ -317,6 +317,10 @@ object KuduUtils {
     getSparkSession.sql(query)
   }
 
+  def readHiveTable(tableName: String): DataFrame = {
+    logger.info(s"Execute Hive Query using spark.table inside the KuduUtils $tableName")
+    getSparkSession.table(tableName)
+  }
 
   /*
    * Read Kudu table using jdbc connection and convert them into data set using spark session

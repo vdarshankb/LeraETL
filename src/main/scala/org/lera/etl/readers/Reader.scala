@@ -11,8 +11,8 @@ import org.lera.etl.util.Enums.Writers
 import org.lera.etl.util.Enums.Writers._
 import org.lera.etl.util.KuduUtils._
 import org.lera.etl.util.utils._
-import org.lera.{TableConfig, connectionContextCreator}
-import org.lera.connectionContextCreator.{getSparkSession, spark}
+import org.lera.{TableConfig}
+import org.lera.connectionContextCreator.{getSparkSession}
 
 
 //import org.lera.{ContextCreator, TableConfig}
@@ -71,7 +71,6 @@ trait Reader{
     throw new ETLException(
       s"Code implementation to get source system and regions is missing in $this"
     )
-
   }
 
   protected def generateFilterCondition(
@@ -81,7 +80,6 @@ trait Reader{
     sourceIncColumnDataType: DataType
   ): String = {
     (sourceIncColumnDataType, targetIncColumnDataType) match {
-
       case (LongType, TimestampType)       => s""
       case (StringType | TimestampType, _) => s""
       case _                               => s""

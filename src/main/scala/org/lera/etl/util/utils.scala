@@ -8,12 +8,12 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.{col, trim}
 import org.apache.spark.sql.types.{DataType, StringType}
 import org.apache.spark.sql.{DataFrame, Encoder, Row, SparkSession}
-
 import org.lera.etl.util.Constants.StringExpr._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
 import org.lera.etl.util.Enums._
 import org.lera.etl.util.KuduUtils.executeHiveQuery
+import org.lera.etl.util.jdbcConnector.executeQuery
 
 //import org.lera.ContextCreator.getProperty
 //import org.lera.ContextCreator.spark
@@ -40,37 +40,31 @@ object utils {
   }
   
   lazy val defaultValuesConfigTableName : String = {
-    
     val defaultTableName : String = getProperty(defaultValuesCfgTableName)
     s"$configDatabase.$defaultTableName"
   }
   
   lazy val joinConfigTableName : String ={
-    
     val joinTableName : String = getProperty(joinCfgTableName)
     s"$configDatabase.$joinTableName"
   }
   
   lazy val lookupConfigTableName : String = {
-    
     val lookupTableName : String = getProperty(lookupCfgTableName)
     s"$configDatabase.$lookupTableName"
   }
   
   lazy val conditionalMappingConfigTableName : String = {
-    
     val condTableName : String = getProperty(conditionCfgTableName)
     s"$configDatabase.$condTableName"
   }
   
   lazy val deleteColumnConfigTableName : String = {
-    
     val deleteTable : String = getProperty(deleteCfgTableName)
     s"$configDatabase.$deleteTable"
   }
   
   lazy val filterColumnTableName : String = {
-    
     val filterTable: String = getProperty(filterCfgTableName)
     s"$configDatabase.$filterTable"
   }
@@ -90,12 +84,12 @@ object utils {
   val getTargetType : String => Writers.writerType = tableType =>
     Writers
       .fromString(writerType = tableType)
-      .getOrElse(throw new ETLException("unknown target type"))
+      .getOrElse(throw new ETLException("Unknown target type"))
 
   val getTableType: String => Writers.writerType = tableType =>
     Writers
       .fromString(writerType = tableType)
-      .getOrElse(throw new ETLException("unknown target type"))
+      .getOrElse(throw new ETLException("Unknown target type"))
 
   val auditUpdate: (TableConfig,RunStatus) => Unit = (config,runState) => {
     auditTableUpdate(
@@ -118,7 +112,6 @@ object utils {
 
   def readSQLFromHDFSFile(filepath : String) : String ={
     getSparkSession.read.textFile(filepath).collect().mkString
-    //spark.read.textFile(filepath).collect().mkString
   }
 
   def insert[T](list : Seq[T], i:Int, value : T)  : Seq[T] = {
@@ -127,7 +120,6 @@ object utils {
   }
 
   def isSourceEnabled(property : String, source : String) : Boolean =
-//    spark.conf
     getSparkSession.conf
       .getOption(key = property)
       .getOrElse(StringExpr.empty)
@@ -137,7 +129,6 @@ object utils {
       .contains(source.toLowerCase)
 
   def isSourceBasedLoad(sourceSystem : String) : Boolean =
-   // spark.conf
     getSparkSession.conf
       .getOption("")
       .getOrElse(empty)
@@ -147,8 +138,7 @@ object utils {
       .map(_.toLowerCase)
       .contains(sourceSystem.toLowerCase)
 
-  def PropertyException : String => Throwable =
-    error => new MissingPropertyException(error)
+  def PropertyException: String => Throwable = error => new MissingPropertyException(error)
 
   /*
    * Generate JDBC URL by replacing username and password in the base URL
@@ -173,16 +163,12 @@ object utils {
   * @return Dataframe
   * */
 
-  def readHiveTable(tableName: String) : DataFrame = {
-
+ /* def readHiveTable(tableName: String): DataFrame = {
     val spark: SparkSession = getSparkSession
-
-    println(s"Executing for tble name:$tableName")
-    logger.info(s"Read hive table using table name: $tableName")
+    logger.info(s"Inside the readHiveTable method in the Utils.scala and trigger for table: $tableName")
     spark.sql(s"Select * from $tableName").show(10)
     spark.table(tableName)
-
-  }
+  }*/
 
   /*
    * Get count of CSV files in HDFS location
@@ -250,8 +236,8 @@ object utils {
          s"INSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
      }
 
-     executeHiveQuery(query)
-     //executeQuery(query)
+     //executeHiveQuery(query)
+     executeQuery(query)
 
    }
 

@@ -3,18 +3,17 @@ package org.lera
 import java.io.FileInputStream
 import java.util.Properties
 import java.util.concurrent.TimeUnit
+
 import java.sql.{Connection, DriverManager, Statement}
 
-import org.lera.etl.util.utils.{JDBC_URL_Generator, OptionUtils, PropertyException}
+import org.lera.etl.util.utils.{OptionUtils, PropertyException}
 import org.apache.spark.sql.functions._
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.{DataFrame, RuntimeConfig, SparkSession}
-import org.lera.connectionContextCreator.{getConf, getProperty}
-import org.lera.etl.readers.{KuduReader, Reader}
-import org.lera.etl.util.Constants.{database_name, fullLoadType, loggerLevel}
-import org.lera.etl.util.jdbcConnector
-import org.lera.etl.util.Parser.logger
+import org.lera.connectionContextCreator.{getProperty}
+import org.lera.etl.util.Constants.{ loggerLevel}
 import org.lera.etl.util.jdbcConnector.connection
+import org.lera.connectionContextCreator._
 
 import scala.collection.mutable
 
@@ -87,6 +86,7 @@ case class TimeConvert(sourceColumn: String,
 //trait ContextCreator {
 object connectionContextCreator
 {
+
   private var spark: SparkSession = _
 
   def close() = {
@@ -102,7 +102,6 @@ object connectionContextCreator
    * */
   def getProperty(key: String): String ={
     getConf.getOption(key).getNonEmptyOrElse(throw PropertyException(key))
-
   }
 
   /* returns spark conf instance
@@ -118,7 +117,8 @@ object connectionContextCreator
   * @return
    */
   def getSparkSession: SparkSession = {
-    if (null == spark) connectionContextCreator.apply()
+    if (null == spark)
+      connectionContextCreator.apply()
     spark
   }
 
@@ -145,7 +145,8 @@ object connectionContextCreator
     }
 
     val logLevel: String = spark.conf.getOption(loggerLevel).orNull
-    Logger.getRootLogger.setLevel(Level.toLevel(logLevel, Level.INFO))
+    Logger.getRootLogger.setLevel(Level.toLevel(logLevel, Level.DEBUG))
+
     spark
   }
 
