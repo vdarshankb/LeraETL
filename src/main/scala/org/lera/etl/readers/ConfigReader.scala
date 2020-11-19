@@ -19,7 +19,6 @@ object ConfigReader {
   // Commented by Darshan
   // lazy val ETL_ConfigTable: String = s"$configDatabase.$configTable"
   lazy val ETL_ConfigTable: String = s"$configDatabase.$configTable"
-
   println(s"Config table is: $ETL_ConfigTable")
 
   private val logger: Logger = Logger.getLogger(this.getClass)
@@ -43,13 +42,12 @@ object ConfigReader {
   def configLoader(filterCondition: String): Seq[TableConfig] =
   {
 
-    logger.info("Inside the ConfigReader.configLoader method")
-    //logger.info(s"Reading config table $ETL_ConfigTable with filter condition: $filterCondition")
+    logger.info(s"Inside the ConfigReader.configLoader method and filterCondition is $filterCondition")
 
     import org.apache.spark.sql.Dataset
     import org.apache.spark.sql.Encoders
 
-   /* Commented as we dont have Kudu
+   /* Commented as we dont have Kudu but now calling thew below readHiveWithCondition method
       val configs: Dataset[Config] =
       readKuduWithCondition(ETL_ConfigTable, filterCondition).as[Config](Encoders.product[Config])
    */
@@ -60,7 +58,6 @@ object ConfigReader {
       readHiveWithCondition(ETL_ConfigTable, filterCondition).as[Config](Encoders.product[Config])
 
     logger.info(s"After triggering readHiveWithCondition method, the contents of the configs dataset is ${configs.collect().seq.toString()}")
-
     logger.info("configs.show is as below")
     configs.show(20)
 

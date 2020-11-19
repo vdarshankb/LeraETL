@@ -4,8 +4,8 @@ import org.lera.etl.util.utils._
 
 import scala.util.{Failure, Success}
 import org.lera.{TableConfig, connectionContextCreator}
-import org.lera.connectionContextCreator.{getProperty, getSparkSession}
-import org.lera.etl.util.jdbcConnector.{JDBCdriver, connectionURL, executeQuery}
+import org.lera.connectionContextCreator.{getProperty, getSparkSession, spark}
+import org.lera.etl.util.jdbcConnector.{JDBCdriver, connectionURL, executeQueryUsingImpala}
 
 
 //import org.lera.etl.util.ImpalaConnector._
@@ -185,10 +185,6 @@ object KuduUtils {
     val columns   = if(selectColumns.isEmpty) "*" else selectColumns
     val whereCond = if(whereClause.isEmpty) "" else s"WHERE $whereClause"
 
-    //commented the below line as we were getting extra table name after the SELECT query, which
-    // was causing trouble with hive
-    //val query = s"(SELECT $columns FROM $tableName $whereCond)${tableName.split("\\.")(1)}"
-
     val query = s"SELECT $columns FROM $tableName $whereCond"
     logger.info(s"Reading hive table with columns: $query")
     val queryOutputDF = readHiveTableWithQuery(query)
@@ -274,12 +270,12 @@ object KuduUtils {
     val dropStatement : String =
       s"DROP TABLE IF EXISTS $intermediateTable"
 
-    executeQuery(dropStatement)
+    executeQueryUsingImpala(dropStatement)
 
     val tableCreateStatement : String =
       s"CREATE TABLE $intermediateTable.STORED AS PARQUET AS SELECT * FROM ($query)tmp WHERE false"
 
-    executeQuery(tableCreateStatement)
+    executeQueryUsingImpala(tableCreateStatement)
 
     val columns : String = readHiveTable(intermediateTable).columns
       .map(col => s"'$col'")
@@ -288,7 +284,7 @@ object KuduUtils {
     val insertQuery : String =
       s"INSERT INTO TABLE $intermediateTable ($columns) SELECT $columns FROM ($query)tmp"
 
-    executeQuery(insertQuery)
+    executeQueryUsingImpala(insertQuery)
     getSparkSession.catalog.refreshTable(intermediateTable)
 
     readHiveTable(s"$intermediateTable")
@@ -301,6 +297,17 @@ object KuduUtils {
   * @param query
   * @return
   * */
+  def insertIntoHiveTable(query : String): DataFrame = {
+    readHiveTableWithQuery(query)
+  }
+
+  /*
+ * Execute query on Hive table using spark session
+ * This internally calls the readHiveTableWithQuery
+ *
+ * @param query
+ * @return
+ * */
   def executeHiveQuery(query : String): DataFrame = {
     readHiveTableWithQuery(query)
   }
@@ -313,13 +320,13 @@ object KuduUtils {
  * */
   def readHiveTableWithQuery(query : String): DataFrame = {
     logger.info(s"Inside readHiveTableWithQuery method and Executing $query using spark sql and below is the sample data")
-    getSparkSession.sql(query).show(10)
     getSparkSession.sql(query)
   }
 
   def readHiveTable(tableName: String): DataFrame = {
-    logger.info(s"Execute Hive Query using spark.table inside the KuduUtils $tableName")
-    getSparkSession.table(tableName)
+    val query: String = s"SELECT * FROM $tableName"
+    logger.info(s"Executing readHiveTable method and executing the query:$query")
+    getSparkSession.sql(query)
   }
 
   /*

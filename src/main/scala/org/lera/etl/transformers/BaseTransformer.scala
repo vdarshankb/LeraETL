@@ -185,7 +185,7 @@ trait BaseTransformer {
     configTableName =>
       tableConfig => {
         val joinTableDf: DataFrame = {
-          logger.info("Before calling the readHiveWithCondition in the BaseTransformer.configReader method")
+          logger.info(s"Before calling the readHiveWithCondition in the BaseTransformer.configReader method. source_config_table_type = $source_config_table_type")
           if(source_config_table_type == "Hive") (
             readHiveWithCondition(configTableName, whereCondFunc(tableConfig)).cache()
             )

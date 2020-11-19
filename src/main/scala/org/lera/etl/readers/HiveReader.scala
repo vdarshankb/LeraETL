@@ -57,7 +57,7 @@ object HiveReader extends Reader{
     val maxValueArr: Array[Row] =
       incDF.filter(_.getAs(0) != null).collect()
 
-    logger.info(s" Inisde getIncrementalLoadFilterCondition method and ${tableConf.source_database}${tableConf.source_table}")
+    logger.info(s" Inside getIncrementalLoadFilterCondition method and ${tableConf.source_database}${tableConf.source_table}")
 
     if(maxValueArr.isEmpty){StringExpr.empty}
     else {

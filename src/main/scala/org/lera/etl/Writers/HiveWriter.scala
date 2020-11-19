@@ -14,7 +14,7 @@ import scala.collection.parallel.ParSeq
 import org.lera.connectionContextCreator.getSparkSession
 import org.lera.etl.util.KuduUtils.readHiveTable
 import org.lera.etl.util.jdbcConnector
-import org.lera.etl.util.jdbcConnector.executeQuery
+import org.lera.etl.util.jdbcConnector.executeQueryUsingImpala
 
 /*
 import org.lera.ContextCreator.spark
@@ -77,7 +77,7 @@ object HiveWriter extends Writer {
 
       val finalTargetTableName=s"${tableConf.target_database}.${tableConf.target_table}"
 
-      validateTableMetadata(finalTargetTableName)
+     // validateTableMetadata(finalTargetTableName)
 
       logger.info(
         s"Data loaded successfully into target Hive table $finalTargetTableName"
@@ -93,25 +93,27 @@ object HiveWriter extends Writer {
                              columns: String): Unit = {
 
     logger.info(s"Inserting data into non partitioned table $targetTableName")
-    logger.debug(
-      s"Executing query : INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
-    )
+    logger.debug(s"Executing query : INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable")
     getSparkSession.sql(s"INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
     )
 
   }
 
   def validateTableMetadata(targetTableName: String)(): Unit = {
-
+/* The entire method is commented as this is related to Kudu
     Try {
-      executeQuery("SET QUERY_TIMEOUT_S-120;")
-      executeQuery(s"INVALIDATE METADATA $targetTableName")
+      executeQueryUsingImpala("SET QUERY_TIMEOUT_S-120;")
+      executeQueryUsingImpala(s"INVALIDATE METADATA $targetTableName")
+
     } match {
       case Success(_) =>
         logger.info(s"Invalidated metadata for table $targetTableName")
       case _ =>
         logger.warn(s"Failed to invalidate metadata for $targetTableName")
     }
+
+ */
+
   }
 
   private def loadPartitionedData(intermediateTable: String,

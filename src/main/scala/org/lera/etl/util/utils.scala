@@ -12,8 +12,8 @@ import org.lera.etl.util.Constants.StringExpr._
 import org.lera.etl.util.Constants._
 import org.lera.etl.util.Enums.RunStatus.{FAILED, RunStatus}
 import org.lera.etl.util.Enums._
-import org.lera.etl.util.KuduUtils.executeHiveQuery
-import org.lera.etl.util.jdbcConnector.executeQuery
+import org.lera.etl.util.KuduUtils.{executeHiveQuery, insertIntoHiveTable}
+import org.lera.etl.util.jdbcConnector.executeQueryUsingImpala
 
 //import org.lera.ContextCreator.getProperty
 //import org.lera.ContextCreator.spark
@@ -92,6 +92,8 @@ object utils {
       .getOrElse(throw new ETLException("Unknown target type"))
 
   val auditUpdate: (TableConfig,RunStatus) => Unit = (config,runState) => {
+    logger.info("Inside the auditUpdate")
+
     auditTableUpdate(
     tableRunInfo = TableRunInfo(
     sourceSystem = config.source_system,
@@ -236,8 +238,8 @@ object utils {
          s"INSERT INTO TABLE $auditTableName VALUES('$source','$regionName','$table','$loaderType','$startTime','$now','$FAILED','$message');"
      }
 
+     //commented by Darshan as the spark context is closing while updating audit table
      //executeHiveQuery(query)
-     executeQuery(query)
 
    }
 
@@ -468,12 +470,9 @@ object utils {
          df.withColumn(colName = columnName, col = trim(col(colName = columnName)))
        })
    }
-
-
    }
 
    implicit class OptionUtils[+A](option : Option[A]){
-
      /*
       * String type is empty returns default value
       *

@@ -275,12 +275,11 @@ object LeraETLMain  {
 
     import org.lera.etl.util.Enums.RunStatus._
 
-    logger.info(s"Database and table information are parsed from the config table ${tableConfigs.toString()}")
+    logger.info(s"Database and table information are parsed from the config table ${tableConfigs.seq.toString()}")
 
-    //The below section is commented by Darshan. This will be resovled after implementing jb execution control table
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {
-        //auditUpdate(tableConfig, RUNNING)
+        auditUpdate(tableConfig, RUNNING)
         tableConfig
       })
       .flatMap(tableConfig => {

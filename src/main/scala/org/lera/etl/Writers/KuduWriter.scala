@@ -50,7 +50,7 @@ object KuduWriter extends Writer {
           .mode(SaveMode.Overwrite)
           .saveAsTable(tableName = s"$intermediateTableName")
 
-        executeQuery( s"INVALIDATE METADATA $intermediateTableName")
+        executeQueryUsingImpala( s"INVALIDATE METADATA $intermediateTableName")
         logger.info(s"Loading data into target table $tableName")
 
         val query: String =
@@ -59,7 +59,7 @@ object KuduWriter extends Writer {
           )
 
         import org.lera.etl.util.Enums.RunStatus._
-        executeQuery(query)
+        executeQueryUsingImpala(query)
         logger.info(s"Successfully loaded data into target table $tableName")
         auditUpdate(tableConf, SUCCESS)
 
@@ -89,9 +89,9 @@ object KuduWriter extends Writer {
           s"LOWER($sourceSystem) in ($sourceSystems)"
         else StringExpr.empty
 
-      executeQuery(buildDeleteStatement(tableName, filterCond))
+      executeQueryUsingImpala(buildDeleteStatement(tableName, filterCond))
     } else {
-      executeQuery(buildDeleteStatement(tableName))
+      executeQueryUsingImpala(buildDeleteStatement(tableName))
     }
 
   }
