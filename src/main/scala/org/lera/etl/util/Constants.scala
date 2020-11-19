@@ -1,16 +1,15 @@
 package org.lera.etl.util
 
 object Constants {
-  val stringNULL="null"
 
+  val environment = "Lera"
+//  val environment = "Local"
+
+  val stringNULL="null"
   val fullLoadType: String = "full"
   val incremental: String = "incremental"
   val incr: String = "incr"
-
   val csv: String = "csv"
-
-
-
   val partitionColumn: String = ""
   val numOfPartitions: String = ""
 
