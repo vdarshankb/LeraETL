@@ -2,23 +2,22 @@ package org.lera.etl
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
+import org.lera.connectionContextCreator
 
 //import org.lera.ContextCreator.getProperty
 
-import org.lera.connectionContextCreator.{getProperty, getConf, getSparkSession}
-
+import org.lera.connectionContextCreator.getProperty
 import org.lera.etl.util.Constants.StringExpr
-import org.lera.etl.util.Parser.{logger, _}
+import org.lera.etl.util.KuduUtils
+import org.lera.etl.util.Parser._
 import org.lera.etl.util.utils._
-import org.lera.etl.util.{ETLException, EmailSMTPClient, KuduUtils, TableRunInfo}
 //import org.lera.{ContextCreator, TableConfig}
-import org.lera.{connectionContextCreator, TableConfig}
-
+import org.lera.TableConfig
 
 import scala.collection.parallel.ParSeq
 import scala.util.Try
 
-object LeraETLMain  {
+object LeraETLMain {
 
   import scala.concurrent.Future
 
@@ -42,16 +41,38 @@ object LeraETLMain  {
     }
 
     import scala.concurrent.ExecutionContext.Implicits.global
+    connectionContextCreator.createTables()
 
-    val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) = getTableConfig(args)
+//    val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) = getTableConfig(args)
+    val (sourceSystem: String, tableConfigs: ParSeq[TableConfig]) = (
+      "test",
+      ParSeq(
+        TableConfig(
+          "source_system",
+          "sourcedata_regionname",
+          "hive",
+          "hive",
+          "default",
+          "source_table",
+          null,
+          "default",
+          "target_table",
+          "full",
+          null,
+          null
+        )
+      )
+    )
 
     logger.info(s"Source System provided is $sourceSystem")
     logger.info(s"Arguments provided are ${args.seq.toString()}")
-    logger.info(s"Processing for $sourceSystem and for the ${tableConfigs.toString()}")
+    logger.info(
+      s"Processing for $sourceSystem and for the ${tableConfigs.toString()}"
+    )
 
-    val ingestionThread: Future[Unit] = Future(startIngestionProcess(sourceSystem, tableConfigs))
 
-    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
+    startIngestionProcess(sourceSystem, tableConfigs)
+//    ingestionMonitor(ingestionThread, tableConfigs, sourceSystem)
   }
 
   def ingestionMonitor(ingestionThread: Future[Unit],
@@ -157,7 +178,7 @@ object LeraETLMain  {
 
     }
 
-    */
+   */
 
   }
 
@@ -165,11 +186,14 @@ object LeraETLMain  {
 
     logger.info(s"Inside the getControl method.")
 
-    val tableName = s"$etlAuditDatabase.${getProperty("spark.job_exec_control_table")}"
-    val controlDf = KuduUtils.readKuduWithCondition(tableName, s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
-      )
+    val tableName =
+      s"$etlAuditDatabase.${getProperty("spark.job_exec_control_table")}"
+    val controlDf = KuduUtils.readKuduWithCondition(
+      tableName,
+      s"lower(source_system) = '${sourceSystem.toLowerCase()}'"
+    )
 
-    if (controlDf.isEmpty) {
+    if (controlDf.count()==0) {
       val defaultNotificationTime: Int =
         Try(getProperty("spark.default_notification_interval_time"))
           .getOrElse("30")
@@ -186,11 +210,7 @@ object LeraETLMain  {
       controlDf
         .collect()
         .map(
-          row =>
-            (
-              row.getAs[Int]("notification_interval"),
-              row.getAs[Int]("")
-          )
+          row => (row.getAs[Int]("notification_interval"), row.getAs[Int](""))
         )
         .head
     }
@@ -201,7 +221,7 @@ object LeraETLMain  {
                                     message: String,
                                     runTime: String): Unit = {
 
- /*   val recipients: String = getProperty("spark.notification_mail_list")
+    /*   val recipients: String = getProperty("spark.notification_mail_list")
     val subject: String =
       s"${getProperty("spark.notification_mail_subject")} for $sourceSystem is "
 
@@ -217,7 +237,7 @@ object LeraETLMain  {
         completeSubject,
         recipients
       )
-*/
+   */
 
   }
 
@@ -240,12 +260,16 @@ object LeraETLMain  {
           .split(StringExpr.comma)
           .filterNot(_.isEmpty)
 
-      logger.info(s"Inside getTableConfig method: sourceSystem = $sourceSystem, region = $region, loadType = $loadType, tableNames = ${tableNames.seq.toString()} ")
+      logger.info(
+        s"Inside getTableConfig method: sourceSystem = $sourceSystem, region = $region, loadType = $loadType, tableNames = ${tableNames.seq.toString()} "
+      )
 
-      (sourceSystem, getTableConfigs(sourceSystem, region, loadType, tableNames) )
+      (
+        sourceSystem,
+        getTableConfigs(sourceSystem, region, loadType, tableNames)
+      )
 
-    }
-    match {
+    } match {
       case Success(value) => value
       case Failure(exception) =>
         val error = if (exception != null & exception.getMessage.nonEmpty) {
@@ -259,12 +283,7 @@ object LeraETLMain  {
             message = error
           )
 
-        sendEmailNotification(
-          Seq(emptyConf).par,
-          sourceSystem,
-          "failed",
-          ""
-        )
+        sendEmailNotification(Seq(emptyConf).par, sourceSystem, "failed", "")
         throw exception
     }
 
@@ -275,7 +294,9 @@ object LeraETLMain  {
 
     import org.lera.etl.util.Enums.RunStatus._
 
-    logger.info(s"Database and table information are parsed from the config table ${tableConfigs.seq.toString()}")
+    logger.info(
+      s"Database and table information are parsed from the config table ${tableConfigs.seq.toString()}"
+    )
 
     val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs
       .map(tableConfig => {
@@ -288,9 +309,8 @@ object LeraETLMain  {
         )
       })
 
-
     //The below line is added by Darshan
-  //  val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs.flatMap((tableConfig => { handler(tableConfig)(getReaderInstance(tableConfig.source_table_type).readData(tableConfig))}))
+    //  val rawData: ParSeq[(TableConfig, DataFrame)] = tableConfigs.flatMap((tableConfig => { handler(tableConfig)(getReaderInstance(tableConfig.source_table_type).readData(tableConfig))}))
 
     // Retain the below line for local testing
     // rawData.foreach(_._2.show(false))

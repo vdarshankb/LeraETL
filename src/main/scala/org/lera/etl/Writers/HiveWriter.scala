@@ -44,7 +44,7 @@ object HiveWriter extends Writer {
 
       handler(tuple._1) {
 
-        val finalTargetTableName = s""
+        val finalTargetTableName = tableName
         logger.debug(
           s"Load Type for the table $finalTargetTableName is $load_type"
         )

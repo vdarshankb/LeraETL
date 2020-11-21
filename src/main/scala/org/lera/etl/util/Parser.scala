@@ -200,7 +200,7 @@ object Parser {
       case EXCEL | CSV | JSON | TEXT => FlatFileReader
       case SQLKUDU                   => SQLKuduReader
       case HIVE                      => HiveReader
-      case RESTAPI                   => APIDataReader
+//      case RESTAPI                   => APIDataReader
     }
   }
   

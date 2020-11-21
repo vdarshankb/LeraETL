@@ -162,7 +162,7 @@ trait BaseTransformer {
         }
 
         throwError =>
-          if (joinTableDf.isEmpty) {
+          if (joinTableDf.count()==0) {
             import org.lera.etl.util.ETLException
             val errMessage: String =
               s"Missing entries in the $configTableName table for source system : $sourceSystem"
@@ -193,7 +193,7 @@ trait BaseTransformer {
         }
 
         throwError =>
-          if (joinTableDf.isEmpty) {
+          if (joinTableDf.count()==0) {
             import org.lera.etl.util.ETLException
             val errMessage: String =
               s"Missing entries in the $configTableName table for source system : $sourceSystem"
