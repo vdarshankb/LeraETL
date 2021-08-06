@@ -44,7 +44,7 @@ object HiveWriter extends Writer {
 
       handler(tuple._1) {
 
-        val finalTargetTableName = tableName
+        val finalTargetTableName = s"${tableConf.target_database}.${tableConf.target_table}"
         logger.debug(
           s"Load Type for the table $finalTargetTableName is $load_type"
         )
@@ -93,8 +93,8 @@ object HiveWriter extends Writer {
                              columns: String): Unit = {
 
     logger.info(s"Inserting data into non partitioned table $targetTableName")
-    logger.debug(s"Executing query : INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable")
-    getSparkSession.sql(s"INSERT INTO TABLE $targetTableName SELECT $columns FROM $intermediateTable"
+    logger.debug(s"Executing query : INSERT INTO TABLE $targetTableName SELECT $columns FROM ${intermediateTable}_temp_view")
+    getSparkSession.sql(s"INSERT INTO TABLE $targetTableName SELECT $columns FROM ${intermediateTable}_temp_view"
     )
 
   }
